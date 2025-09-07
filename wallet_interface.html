@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кошелек покупателя</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 10px 15px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .wallet-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .balance-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .balance-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .balance-card .amount {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #4facfe;
+            color: #4facfe;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .menu-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+        }
+
+        .menu-item h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .menu-item .price {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4facfe;
+            margin-bottom: 10px;
+        }
+
+        .menu-item .details {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .menu-item .ingredients {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .quantity-selector button {
+            background: #4facfe;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .quantity-selector input {
+            width: 60px;
+            text-align: center;
+            padding: 5px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        .order-summary {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .order-summary h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .order-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .order-item:last-child {
+            border-bottom: none;
+        }
+
+        .order-total {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #4facfe;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 2px solid #4facfe;
+        }
+
+        .delivery-time {
+            margin: 15px 0;
+        }
+
+        .delivery-time input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .order-status {
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .status {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        /* Темные темы */
+        body.dark-theme {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        }
+
+        body.dark-theme .container {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        body.dark-theme .wallet-info {
+            background: #34495e;
+        }
+
+        body.dark-theme .balance-card {
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .balance-card h3 {
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .tabs {
+            background: #34495e;
+        }
+
+        body.dark-theme .tab {
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .tab:hover {
+            background: #2c3e50;
+        }
+
+        body.dark-theme .tab.active {
+            background: #2c3e50;
+        }
+
+        body.dark-theme .tab-content {
+            background: #2c3e50;
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .menu-item {
+            background: #34495e;
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .menu-item h3 {
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .order-summary {
+            background: #34495e;
+        }
+
+        body.dark-theme .order-summary h3 {
+            color: #ecf0f1;
+        }
+
+        body.dark-theme .order-status {
+            background: #34495e;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Кошелек покупателя</h1>
+            <p>Управление заказами и балансом</p>
+            <button class="theme-toggle" onclick="toggleTheme()">🌙 Сменить тему</button>
+        </div>
+
+        <div class="wallet-info">
+            <div class="balance-card">
+                <h3>Security Tokens</h3>
+                <div class="amount" id="securityTokens">0.00</div>
+            </div>
+            <div class="balance-card">
+                <h3>Utility Tokens</h3>
+                <div class="amount" id="utilityTokens">0.00</div>
+            </div>
+            <div class="balance-card">
+                <h3>Общий баланс</h3>
+                <div class="amount" id="totalBalance">0.00</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('menu')">Прейскурант</button>
+            <button class="tab" onclick="showTab('order')">Заказ</button>
+            <button class="tab" onclick="showTab('status')">Статус заказа</button>
+            <button class="tab" onclick="showTab('history')">История блокчейна</button>
+        </div>
+
+        <!-- Прейскурант -->
+        <div id="menu" class="tab-content active">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>Прейскурант</h2>
+                <button class="btn" onclick="loadMenu()">🔄 Обновить прейскурант</button>
+            </div>
+            
+            <div id="menuList" class="menu-grid">
+                <div class="menu-item">
+                    <h3>Classic Burger</h3>
+                    <div class="price">$12.99</div>
+                    <div class="details">
+                        Доступно: 15 штук | Приоритет: 8/10 | Время готовки: 10 мин
+                    </div>
+                    <div class="ingredients">
+                        <strong>Состав:</strong><br>
+                        • Beef Patty (200г, 350 ккал)<br>
+                        • Bun (80г, 200 ккал)<br>
+                        • Cheese (30г, 120 ккал)<br>
+                        • Lettuce (20г, 5 ккал)<br>
+                        • Tomato (25г, 10 ккал)<br>
+                        <strong>Общие калории: 685</strong>
+                    </div>
+                    <div class="quantity-selector">
+                        <button onclick="changeQuantity('burger1', -1)">-</button>
+                        <input type="number" id="burger1" value="0" min="0" max="15">
+                        <button onclick="changeQuantity('burger1', 1)">+</button>
+                    </div>
+                </div>
+
+                <div class="menu-item">
+                    <h3>Pepperoni Pizza</h3>
+                    <div class="price">$16.99</div>
+                    <div class="details">
+                        Доступно: 8 штук | Приоритет: 9/10 | Время готовки: 15 мин
+                    </div>
+                    <div class="ingredients">
+                        <strong>Состав:</strong><br>
+                        • Pizza Dough (150г, 300 ккал)<br>
+                        • Tomato Sauce (50г, 25 ккал)<br>
+                        • Mozzarella (80г, 200 ккал)<br>
+                        • Pepperoni (40г, 150 ккал)<br>
+                        <strong>Общие калории: 675</strong>
+                    </div>
+                    <div class="quantity-selector">
+                        <button onclick="changeQuantity('pizza1', -1)">-</button>
+                        <input type="number" id="pizza1" value="0" min="0" max="8">
+                        <button onclick="changeQuantity('pizza1', 1)">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Заказ -->
+        <div id="order" class="tab-content">
+            <h2>Оформление заказа</h2>
+            
+            <div class="order-summary">
+                <h3>Сводка заказа</h3>
+                <div id="orderItems">
+                    <p>Выберите блюда из прейскуранта</p>
+                </div>
+                <div class="order-total" id="orderTotal">Итого: $0.00</div>
+            </div>
+
+            <div class="delivery-time">
+                <label for="deliveryTime"><strong>Время доставки (минуты):</strong></label>
+                <input type="number" id="deliveryTime" value="30" min="15" max="120">
+            </div>
+
+            <button class="btn btn-success" onclick="placeOrder()" style="width: 100%; margin-top: 20px;">
+                🛒 Оформить заказ
+            </button>
+        </div>
+
+        <!-- Статус заказа -->
+        <div id="status" class="tab-content">
+            <h2>Статус заказа</h2>
+            
+            <div class="order-status">
+                <h3>Текущий заказ</h3>
+                <div id="currentOrder">
+                    <p>У вас нет активных заказов</p>
+                </div>
+            </div>
+
+            <div class="order-status">
+                <h3>История заказов</h3>
+                <div id="orderHistory">
+                    <p>История заказов пуста</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- История блокчейна -->
+        <div id="history" class="tab-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>История блокчейна</h2>
+                <div>
+                    <button class="btn" onclick="loadBlockchainHistory()">📊 История заказов</button>
+                    <button class="btn" onclick="loadVotingHistory()">🗳️ История голосований</button>
+                </div>
+            </div>
+            
+            <div class="order-status">
+                <h3>Последние 1000 заказов в блокчейне</h3>
+                <div id="blockchainHistory">
+                    <p>Нажмите кнопку "История заказов" для загрузки данных</p>
+                </div>
+            </div>
+
+            <div class="order-status">
+                <h3>Результаты голосований за всё время</h3>
+                <div id="votingHistory">
+                    <p>Нажмите кнопку "История голосований" для загрузки данных</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTheme = 'light';
+        let cart = {};
+        let currentOrder = null;
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (currentTheme === 'light') {
+                body.classList.add('dark-theme');
+                themeToggle.textContent = '☀️ Светлая тема';
+                currentTheme = 'dark';
+            } else {
+                body.classList.remove('dark-theme');
+                themeToggle.textContent = '🌙 Сменить тему';
+                currentTheme = 'light';
+            }
+        }
+
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Показать выбранную вкладку
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Обновить данные для вкладки
+            if (tabName === 'order') {
+                updateOrderSummary();
+            } else if (tabName === 'status') {
+                loadOrderStatus();
+            }
+        }
+
+        function changeQuantity(itemId, change) {
+            const input = document.getElementById(itemId);
+            const currentValue = parseInt(input.value);
+            const newValue = Math.max(0, Math.min(parseInt(input.max), currentValue + change));
+            input.value = newValue;
+            
+            // Обновить корзину
+            if (newValue > 0) {
+                cart[itemId] = newValue;
+            } else {
+                delete cart[itemId];
+            }
+            
+            updateOrderSummary();
+        }
+
+        function updateOrderSummary() {
+            const orderItems = document.getElementById('orderItems');
+            const orderTotal = document.getElementById('orderTotal');
+            
+            if (Object.keys(cart).length === 0) {
+                orderItems.innerHTML = '<p>Выберите блюда из прейскуранта</p>';
+                orderTotal.textContent = 'Итого: $0.00';
+                return;
+            }
+
+            let total = 0;
+            let itemsHtml = '';
+
+            for (const [itemId, quantity] of Object.entries(cart)) {
+                const itemName = getItemName(itemId);
+                const itemPrice = getItemPrice(itemId);
+                const itemTotal = itemPrice * quantity;
+                total += itemTotal;
+
+                itemsHtml += `
+                    <div class="order-item">
+                        <span>${itemName} x${quantity}</span>
+                        <span>$${itemTotal.toFixed(2)}</span>
+                    </div>
+                `;
+            }
+
+            orderItems.innerHTML = itemsHtml;
+            orderTotal.textContent = `Итого: $${total.toFixed(2)}`;
+        }
+
+        function getItemName(itemId) {
+            const names = {
+                'burger1': 'Classic Burger',
+                'pizza1': 'Pepperoni Pizza'
+            };
+            return names[itemId] || 'Неизвестное блюдо';
+        }
+
+        function getItemPrice(itemId) {
+            const prices = {
+                'burger1': 12.99,
+                'pizza1': 16.99
+            };
+            return prices[itemId] || 0;
+        }
+
+        function placeOrder() {
+            if (Object.keys(cart).length === 0) {
+                showAlert('Выберите хотя бы одно блюдо для заказа', 'error');
+                return;
+            }
+
+            const deliveryTime = parseInt(document.getElementById('deliveryTime').value);
+            const customerWallet = 'Customer_Wallet_123'; // В реальном приложении это будет адрес кошелька пользователя
+
+            const orderItems = Object.entries(cart).map(([itemId, quantity]) => ({
+                menu_item_id: itemId,
+                quantity: quantity
+            }));
+
+            // Симуляция API вызова
+            const order = {
+                id: 'ORDER_' + Date.now(),
+                customer_wallet: customerWallet,
+                items: orderItems,
+                total_amount: calculateTotal(),
+                delivery_time_minutes: deliveryTime,
+                status: 'Pending',
+                created_timestamp: Date.now()
+            };
+
+            currentOrder = order;
+            cart = {};
+            
+            // Очистить корзину
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.value = 0;
+            });
+
+            showAlert('Заказ успешно оформлен! Ожидайте подтверждения от ресторана.', 'success');
+            updateOrderSummary();
+            loadOrderStatus();
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            for (const [itemId, quantity] of Object.entries(cart)) {
+                total += getItemPrice(itemId) * quantity;
+            }
+            return total;
+        }
+
+        function loadOrderStatus() {
+            const currentOrderDiv = document.getElementById('currentOrder');
+            
+            if (currentOrder) {
+                const statusClass = currentOrder.status.toLowerCase();
+                const statusText = {
+                    'pending': 'На рассмотрении',
+                    'confirmed': 'Подтвержден',
+                    'cancelled': 'Отменен'
+                };
+
+                currentOrderDiv.innerHTML = `
+                    <div class="status ${statusClass}">${statusText[currentOrder.status] || currentOrder.status}</div>
+                    <p><strong>ID заказа:</strong> ${currentOrder.id}</p>
+                    <p><strong>Сумма:</strong> $${currentOrder.total_amount.toFixed(2)}</p>
+                    <p><strong>Время доставки:</strong> ${currentOrder.delivery_time_minutes} минут</p>
+                    <p><strong>Дата создания:</strong> ${new Date(currentOrder.created_timestamp).toLocaleString()}</p>
+                    ${currentOrder.status === 'Pending' ? 
+                        '<button class="btn btn-secondary" onclick="cancelOrder()">Отменить заказ</button>' : 
+                        currentOrder.status === 'Confirmed' ? 
+                        '<p style="color: green;">✓ Токены начислены на ваш кошелек!</p>' : 
+                        ''
+                    }
+                `;
+            } else {
+                currentOrderDiv.innerHTML = '<p>У вас нет активных заказов</p>';
+            }
+        }
+
+        function cancelOrder() {
+            if (currentOrder && currentOrder.status === 'Pending') {
+                const reason = prompt('Причина отмены заказа:');
+                if (reason) {
+                    currentOrder.status = 'Cancelled';
+                    currentOrder.cancellation_reason = reason;
+                    showAlert('Заказ отменен', 'success');
+                    loadOrderStatus();
+                }
+            }
+        }
+
+        function loadMenu() {
+            // Загрузка меню через API
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetMenu: {}
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.Menu) {
+                    displayMenu(data.Menu.items);
+                    showAlert('Прейскурант обновлен', 'success');
+                } else {
+                    showAlert('Ошибка загрузки меню', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function displayMenu(items) {
+            const menuList = document.getElementById('menuList');
+            let html = '';
+            
+            items.forEach(item => {
+                const votingSection = item.is_available_for_voting ? 
+                    `<div style="background: #fff3cd; padding: 10px; border-radius: 5px; margin: 10px 0;">
+                        <strong>🗳️ Доступно для голосования!</strong>
+                        <button class="btn" onclick="voteOnItem('${item.id}', true)" style="margin: 5px;">👍 За</button>
+                        <button class="btn btn-secondary" onclick="voteOnItem('${item.id}', false)" style="margin: 5px;">👎 Против</button>
+                    </div>` : '';
+                
+                const ingredientsHtml = item.ingredients.map(ing => 
+                    `• ${ing.name} (${ing.amount_grams}г, ${ing.calories} ккал)`
+                ).join('<br>');
+                
+                html += `
+                    <div class="menu-item">
+                        <h3>${item.name}</h3>
+                        <div class="price">$${item.price.toFixed(2)}</div>
+                        <div class="details">
+                            Доступно: ${item.availability} штук | Приоритет: ${item.priority_rank}/10 | Время готовки: ${item.cooking_time_minutes} мин
+                        </div>
+                        <div class="ingredients">
+                            <strong>Состав:</strong><br>
+                            ${ingredientsHtml}<br>
+                            <strong>Общие калории: ${item.total_calories}</strong>
+                        </div>
+                        ${votingSection}
+                        ${!item.is_available_for_voting ? `
+                            <div class="quantity-selector">
+                                <button onclick="changeQuantity('${item.id}', -1)">-</button>
+                                <input type="number" id="${item.id}" value="0" min="0" max="${item.availability}">
+                                <button onclick="changeQuantity('${item.id}', 1)">+</button>
+                            </div>
+                        ` : '<p style="color: #856404;">⚠️ Недоступно для заказа (на голосовании)</p>'}
+                    </div>
+                `;
+            });
+            
+            menuList.innerHTML = html;
+        }
+
+        function voteOnItem(itemId, voteFor) {
+            const voterWallet = 'Customer_Wallet_123'; // В реальном приложении это будет адрес кошелька пользователя
+            
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    VoteOnMenuItem: {
+                        voter_wallet: voterWallet,
+                        menu_item_id: itemId,
+                        vote_for: voteFor
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.VoteResult && data.VoteResult.success) {
+                    showAlert(`Голос ${voteFor ? 'ЗА' : 'ПРОТИВ'} успешно отдан!`, 'success');
+                    loadMenu(); // Обновляем меню
+                } else {
+                    showAlert('Ошибка при голосовании: ' + (data.Error ? data.Error.message : 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function loadBlockchainHistory() {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetBlockchainHistory: {
+                        limit: 1000
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.BlockchainHistory) {
+                    displayBlockchainHistory(data.BlockchainHistory.orders);
+                } else {
+                    showAlert('Ошибка загрузки истории блокчейна', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function displayBlockchainHistory(orders) {
+            const historyDiv = document.getElementById('blockchainHistory');
+            
+            if (orders.length === 0) {
+                historyDiv.innerHTML = '<p>История заказов пуста</p>';
+                return;
+            }
+            
+            let html = '<table class="table"><thead><tr><th>ID заказа</th><th>Кошелек покупателя</th><th>Сумма</th><th>Токены</th><th>Статус</th><th>Дата</th></tr></thead><tbody>';
+            
+            orders.forEach(order => {
+                html += `
+                    <tr>
+                        <td>${order.order_id}</td>
+                        <td>${order.customer_wallet}</td>
+                        <td>$${order.total_amount.toFixed(2)}</td>
+                        <td>${order.tokens_issued.toFixed(2)}</td>
+                        <td><span class="status ${order.status.toLowerCase()}">${order.status}</span></td>
+                        <td>${new Date(order.timestamp * 1000).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            historyDiv.innerHTML = html;
+        }
+
+        function loadVotingHistory() {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetVotingHistory: {}
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.VotingHistory) {
+                    displayVotingHistory(data.VotingHistory.votes);
+                } else {
+                    showAlert('Ошибка загрузки истории голосований', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function displayVotingHistory(votes) {
+            const historyDiv = document.getElementById('votingHistory');
+            
+            if (votes.length === 0) {
+                historyDiv.innerHTML = '<p>История голосований пуста</p>';
+                return;
+            }
+            
+            let html = '<table class="table"><thead><tr><th>Голосовавший</th><th>Блюдо</th><th>Вес голоса</th><th>Голос</th><th>Дата</th></tr></thead><tbody>';
+            
+            votes.forEach(vote => {
+                html += `
+                    <tr>
+                        <td>${vote.voter_wallet}</td>
+                        <td>${vote.menu_item_name}</td>
+                        <td>${vote.vote_weight.toFixed(2)}</td>
+                        <td><span class="status ${vote.vote_for ? 'confirmed' : 'cancelled'}">${vote.vote_for ? 'ЗА' : 'ПРОТИВ'}</span></td>
+                        <td>${new Date(vote.timestamp * 1000).toLocaleString()}</td>
+                    </tr>
+                `;
+            });
+            
+            html += '</tbody></table>';
+            historyDiv.innerHTML = html;
+        }
+
+        function loadWalletBalance() {
+            // Симуляция загрузки баланса
+            document.getElementById('securityTokens').textContent = '125.50';
+            document.getElementById('utilityTokens').textContent = '12.55';
+            document.getElementById('totalBalance').textContent = '138.05';
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            
+            const container = document.querySelector('.tab-content.active');
+            container.insertBefore(alert, container.firstChild);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            loadWalletBalance();
+            loadOrderStatus();
+        });
+    </script>
+</body>
+</html>
