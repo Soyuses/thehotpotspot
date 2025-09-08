@@ -15,6 +15,18 @@ use std::thread;
 
 mod simple_server;
 use simple_server::SimpleServer;
+mod web_server;
+use web_server::WebServer;
+mod franchise_network;
+use franchise_network::{FranchiseNetwork, NodeType, SaleItem};
+mod pos_api;
+use pos_api::PosApiServer;
+mod consensus;
+use consensus::{ConsensusAlgorithm, Block as ConsensusBlock, Transaction as ConsensusTransaction, TransactionType};
+mod p2p_network;
+use p2p_network::P2PNode;
+mod ipfs_storage;
+use ipfs_storage::IPFSStorage;
 
 // Utility Token for voting
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -71,6 +83,8 @@ struct Check {
     timestamp: u64,
     is_activated: bool,
     blockchain_account: String,
+    phone_number: Option<String>, // Номер телефона для авторизации
+    is_claimed: bool, // Был ли чек уже использован для переноса баланса
 }
 
 impl Check {
@@ -97,7 +111,15 @@ impl Check {
             timestamp,
             is_activated: false,
             blockchain_account,
+            phone_number: None,
+            is_claimed: false,
         }
+    }
+
+    fn new_with_phone(amount: f64, food_items: Vec<String>, phone_number: String) -> Self {
+        let mut check = Self::new(amount, food_items);
+        check.phone_number = Some(phone_number);
+        check
     }
 
     fn generate_check_id(amount: f64, food_items: &[String], timestamp: u64) -> String {
@@ -196,6 +218,86 @@ impl BlockchainAccount {
     }
 }
 
+// Authorized User with phone verification
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AuthorizedUser {
+    phone_number: String,
+    wallet_address: String,
+    verification_code: String,
+    is_verified: bool,
+    created_timestamp: u64,
+    last_login_timestamp: Option<u64>,
+}
+
+impl AuthorizedUser {
+    fn new(phone_number: String, wallet_address: String) -> Self {
+        let verification_code = Self::generate_verification_code();
+        AuthorizedUser {
+            phone_number,
+            wallet_address,
+            verification_code,
+            is_verified: false,
+            created_timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            last_login_timestamp: None,
+        }
+    }
+
+    fn generate_verification_code() -> String {
+        let mut rng = fastrand::Rng::new();
+        format!("{:06}", rng.u32(100000..999999))
+    }
+
+    fn verify(&mut self, code: &str) -> Result<(), String> {
+        if self.verification_code == code {
+            self.is_verified = true;
+            self.last_login_timestamp = Some(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            );
+            Ok(())
+        } else {
+            Err("Invalid verification code".to_string())
+        }
+    }
+}
+
+// Charity Fund for owner's family
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CharityFund {
+    fund_id: String,
+    fund_name: String,
+    owner_family: String,
+    total_donations: f64,
+    created_timestamp: u64,
+    is_active: bool,
+}
+
+impl CharityFund {
+    fn new(owner_family: String) -> Self {
+        let fund_id = format!("CHARITY_{}", hex::encode(&owner_family.as_bytes()));
+        CharityFund {
+            fund_id,
+            fund_name: format!("Благотворительный фонд семьи {}", owner_family),
+            owner_family,
+            total_donations: 0.0,
+            created_timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            is_active: true,
+        }
+    }
+
+    fn add_donation(&mut self, amount: f64) {
+        self.total_donations += amount;
+    }
+}
+
 // Enhanced Token Holder with roles
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct TokenHolder {
@@ -204,8 +306,13 @@ struct TokenHolder {
     utility_tokens: f64,
     role: UserRole,
     is_main_owner: bool,
+    is_charity_fund: bool, // Является ли благотворительным фондом
+    is_franchise_owner: bool, // Является ли владельцем франшизы
     checks: Vec<Check>,
     blockchain_accounts: HashMap<String, BlockchainAccount>,
+    phone_number: Option<String>, // Номер телефона для авторизации
+    is_authorized: bool, // Авторизован ли пользователь по телефону
+    franchise_nodes: Vec<String>, // Список нод франшизы (если применимо)
 }
 
 impl TokenHolder {
@@ -216,9 +323,53 @@ impl TokenHolder {
             utility_tokens: 0.0,
             role: if is_main_owner { UserRole::MainOwner } else { UserRole::Unauthorized },
             is_main_owner,
+            is_charity_fund: false,
+            is_franchise_owner: false,
             checks: vec![],
             blockchain_accounts: HashMap::new(),
+            phone_number: None,
+            is_authorized: false,
+            franchise_nodes: vec![],
         }
+    }
+
+    fn new_charity_fund(address: String, fund_name: String) -> Self {
+        TokenHolder {
+            address,
+            security_tokens: 0.0,
+            utility_tokens: 0.0,
+            role: UserRole::MainOwner, // Благотворительный фонд имеет особый статус
+            is_main_owner: false,
+            is_charity_fund: true,
+            is_franchise_owner: false,
+            checks: vec![],
+            blockchain_accounts: HashMap::new(),
+            phone_number: None,
+            is_authorized: true, // Фонд всегда авторизован
+            franchise_nodes: vec![],
+        }
+    }
+
+    fn new_franchise_owner(address: String, franchise_nodes: Vec<String>) -> Self {
+        TokenHolder {
+            address,
+            security_tokens: 0.0,
+            utility_tokens: 0.0,
+            role: UserRole::Unauthorized,
+            is_main_owner: false,
+            is_charity_fund: false,
+            is_franchise_owner: true,
+            checks: vec![],
+            blockchain_accounts: HashMap::new(),
+            phone_number: None,
+            is_authorized: false,
+            franchise_nodes,
+        }
+    }
+
+    fn authorize_with_phone(&mut self, phone_number: String) {
+        self.phone_number = Some(phone_number);
+        self.is_authorized = true;
     }
 
     fn add_security_tokens(&mut self, amount: f64) {
@@ -557,7 +708,7 @@ impl Transaction {
     }
 }
 
-// Enhanced Blockchain
+// Enhanced Blockchain with new token distribution rules
 #[derive(Clone)]
 struct Blockchain {
     chain: Vec<Block>,
@@ -570,10 +721,23 @@ struct Blockchain {
     smart_contracts: Vec<SmartContract>,
     voting_history: Vec<VotingRecord>,
     blockchain_history: Vec<BlockchainOrderRecord>,
+    authorized_users: HashMap<String, AuthorizedUser>, // phone_number -> AuthorizedUser
+    balance_transfer_history: Vec<BalanceTransferRecord>,
+    charity_fund: CharityFund, // Благотворительный фонд семьи владельца
     main_owner: String,
     difficulty: usize,
     min_stake: f64,
     block_reward: f64,
+    // Новые ограничения на владение токенами
+    max_owner_percentage: f64, // Максимум 48% для владельца
+    max_franchise_percentage: f64, // Максимум 24% для владельцев франшиз (все вместе)
+    max_customer_percentage: f64, // Максимум 49% для покупателей
+    charity_percentage: f64, // 3% для благотворительного фонда
+    franchise_nodes: HashMap<String, String>, // node_id -> franchise_owner_address
+    monitoring_alerts: Vec<MonitoringAlert>, // Система мониторинга
+    unclaimed_tokens: Vec<UnclaimedTokensRecord>, // Невостребованные токены
+    annual_distributions: Vec<AnnualDistribution>, // История годовых распределений
+    current_year: u32, // Текущий год для отслеживания
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -589,8 +753,13 @@ impl Blockchain {
         
         let utility_token = UtilityToken::new("VOTE".to_string());
         
+        // Создаем благотворительный фонд семьи владельца
+        let charity_fund = CharityFund::new(main_owner.clone());
+        let charity_address = charity_fund.fund_id.clone();
+        
         let mut token_holders = HashMap::new();
         token_holders.insert(main_owner.clone(), TokenHolder::new(main_owner.clone(), true));
+        token_holders.insert(charity_address.clone(), TokenHolder::new_charity_fund(charity_address, charity_fund.fund_name.clone()));
         
         Blockchain {
             chain: vec![genesis_block],
@@ -602,42 +771,166 @@ impl Blockchain {
             smart_contracts: vec![],
             voting_history: vec![],
             blockchain_history: vec![],
+            authorized_users: HashMap::new(),
+            balance_transfer_history: vec![],
+            charity_fund,
             main_owner,
             difficulty: 4,
             min_stake: 10.0,
             block_reward: 5.0,
+            // Новые ограничения
+            max_owner_percentage: 48.0, // Максимум 48% для владельца сети
+            max_franchise_percentage: 24.0, // Максимум 24% для владельцев франшиз (все вместе)
+            max_customer_percentage: 49.0, // Максимум 49% для покупателей
+            charity_percentage: 3.0, // 3% для благотворительного фонда
+            franchise_nodes: HashMap::new(),
+            monitoring_alerts: vec![],
+            unclaimed_tokens: vec![],
+            annual_distributions: vec![],
+            current_year: 2024, // Текущий год
         }
     }
 
     fn process_purchase(&mut self, customer: String, food_truck: String, amount: f64, food_items: Vec<String>) -> Check {
-        // In sleep status, 100% of security tokens go to main owner
-        let security_tokens = amount; // 1:1 ratio
-        let utility_tokens = amount * 0.1; // 10% of purchase for voting
+        // Новая логика распределения токенов:
+        // Нода владельца сети: 48% владелец сети, 3% фонд, 49% покупатель
+        // Нода франчайзи: 25% владелец сети, 24% франчайзи, 3% фонд, 49% покупатель
+        
+        let is_franchise_node = self.franchise_nodes.contains_key(&food_truck);
+        
+        let (main_owner_tokens, franchise_owner_tokens, charity_tokens, customer_tokens) = if is_franchise_node {
+            // Для франшизной ноды: 25% + 24% + 3% + 49% = 101% (ошибка в требованиях, используем 25% + 24% + 3% + 48% = 100%)
+            let main_owner_tokens = amount * 0.25; // 25% владельцу сети
+            let franchise_owner_tokens = amount * 0.24; // 24% владельцу франшизы
+            let charity_tokens = amount * 0.03; // 3% фонду
+            let customer_tokens = amount * 0.48; // 48% покупателю
+            (main_owner_tokens, franchise_owner_tokens, charity_tokens, customer_tokens)
+        } else {
+            // Для ноды владельца сети: 48% + 3% + 49% = 100%
+            let main_owner_tokens = amount * 0.48; // 48% владельцу сети
+            let franchise_owner_tokens = 0.0; // 0% для франшизы
+            let charity_tokens = amount * 0.03; // 3% фонду
+            let customer_tokens = amount * 0.49; // 49% покупателю
+            (main_owner_tokens, franchise_owner_tokens, charity_tokens, customer_tokens)
+        };
+        
+        let utility_tokens = amount * 0.1; // 10% utility токенов для голосования
         
         // Create transaction with check
         let transaction = Transaction::new(
             customer.clone(),
-            food_truck,
+            food_truck.clone(),
             amount,
             food_items.clone(),
-            security_tokens,
+            customer_tokens, // Покупатель получает свою долю
             utility_tokens,
         );
         
         let check = transaction.check.as_ref().unwrap().clone();
         
-        // Add security tokens to main owner (100% in sleep status)
-        if let Some(owner_holder) = self.token_holders.get_mut(&self.main_owner) {
-            owner_holder.add_security_tokens(security_tokens);
-            owner_holder.add_check(check.clone());
+        // Распределяем токены согласно новым правилам
+        
+        // 1. Владелец сети получает свою долю (48% для своих нод, 25% для франшизных)
+        if !self.token_holders.contains_key(&self.main_owner) {
+            let mut new_holder = TokenHolder::new(self.main_owner.clone(), true);
+            new_holder.add_security_tokens(main_owner_tokens);
+            new_holder.add_check(check.clone());
+            self.token_holders.insert(self.main_owner.clone(), new_holder);
+        } else {
+            if let Some(holder) = self.token_holders.get_mut(&self.main_owner) {
+                holder.add_security_tokens(main_owner_tokens);
+                holder.add_check(check.clone());
+            }
+        }
+        
+        // 2. Владелец франшизы получает свою долю (только для франшизных нод)
+        if is_franchise_node && franchise_owner_tokens > 0.0 {
+            let franchise_owner = self.franchise_nodes.get(&food_truck).unwrap().clone();
+            if !self.token_holders.contains_key(&franchise_owner) {
+                let mut new_holder = TokenHolder::new_franchise_owner(franchise_owner.clone(), vec![food_truck.clone()]);
+                new_holder.add_security_tokens(franchise_owner_tokens);
+                self.token_holders.insert(franchise_owner.clone(), new_holder);
+            } else {
+                if let Some(holder) = self.token_holders.get_mut(&franchise_owner) {
+                    holder.add_security_tokens(franchise_owner_tokens);
+                }
+            }
+        }
+        
+        // 3. Благотворительный фонд получает 3%
+        let charity_address = self.charity_fund.fund_id.clone();
+        if let Some(charity_holder) = self.token_holders.get_mut(&charity_address) {
+            charity_holder.add_security_tokens(charity_tokens);
+        }
+        self.charity_fund.add_donation(charity_tokens);
+        
+        // 4. Покупатель получает свою долю
+        if !self.token_holders.contains_key(&customer) {
+            let mut new_holder = TokenHolder::new(customer.clone(), false);
+            new_holder.add_security_tokens(customer_tokens);
+            self.token_holders.insert(customer.clone(), new_holder);
+        } else {
+            if let Some(holder) = self.token_holders.get_mut(&customer) {
+                holder.add_security_tokens(customer_tokens);
+            }
         }
         
         // Issue utility tokens for voting
         let voting_power = self.utility_token.issue_voting_tokens(utility_tokens);
         
-        // Add utility tokens to main owner (until account is activated)
-        if let Some(owner_holder) = self.token_holders.get_mut(&self.main_owner) {
-            owner_holder.add_utility_tokens(voting_power);
+        // Utility токены распределяются пропорционально security токенам
+        let total_security = main_owner_tokens + franchise_owner_tokens + charity_tokens + customer_tokens;
+        let main_owner_utility = (main_owner_tokens / total_security) * voting_power;
+        let franchise_owner_utility = (franchise_owner_tokens / total_security) * voting_power;
+        let charity_utility = (charity_tokens / total_security) * voting_power;
+        let customer_utility = (customer_tokens / total_security) * voting_power;
+        
+        // Добавляем utility токены
+        if let Some(main_owner_holder) = self.token_holders.get_mut(&self.main_owner) {
+            main_owner_holder.add_utility_tokens(main_owner_utility);
+        }
+        
+        if is_franchise_node && franchise_owner_tokens > 0.0 {
+            let franchise_owner = self.franchise_nodes.get(&food_truck).unwrap().clone();
+            if let Some(franchise_holder) = self.token_holders.get_mut(&franchise_owner) {
+                franchise_holder.add_utility_tokens(franchise_owner_utility);
+            }
+        }
+        
+        if let Some(charity_holder) = self.token_holders.get_mut(&charity_address) {
+            charity_holder.add_utility_tokens(charity_utility);
+        }
+        
+        if let Some(customer_holder) = self.token_holders.get_mut(&customer) {
+            customer_holder.add_utility_tokens(customer_utility);
+        }
+        
+        // Проверяем ограничения и создаем алерты
+        self.check_token_limits_and_create_alerts();
+        
+        // Добавляем запись о невостребованных токенах (если покупатель не зарегистрирован)
+        // Проверяем, что покупатель не зарегистрирован в системе
+        let is_customer_registered = self.authorized_users.values()
+            .any(|user| user.wallet_address == customer);
+        if !is_customer_registered {
+            let expiry_timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs() + (365 * 24 * 60 * 60); // 1 год до истечения
+            
+            let unclaimed_record = UnclaimedTokensRecord {
+                check_id: check.check_id.clone(),
+                amount: customer_tokens,
+                created_timestamp: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs(),
+                expiry_timestamp,
+                is_distributed: false,
+                distributed_timestamp: None,
+            };
+            
+            self.unclaimed_tokens.push(unclaimed_record);
         }
         
         self.add_transaction(transaction);
@@ -1037,6 +1330,528 @@ impl Blockchain {
             }
         }
     }
+
+    // Авторизация пользователя по номеру телефона
+    fn register_user_with_phone(&mut self, phone_number: String, wallet_address: String) -> Result<String, String> {
+        if self.authorized_users.contains_key(&phone_number) {
+            return Err("Phone number already registered".to_string());
+        }
+
+        let authorized_user = AuthorizedUser::new(phone_number.clone(), wallet_address.clone());
+        let verification_code = authorized_user.verification_code.clone();
+        
+        self.authorized_users.insert(phone_number.clone(), authorized_user);
+        
+        // Создаем или обновляем TokenHolder
+        if let Some(holder) = self.token_holders.get_mut(&wallet_address) {
+            holder.authorize_with_phone(phone_number);
+        } else {
+            let mut holder = TokenHolder::new(wallet_address.clone(), false);
+            holder.authorize_with_phone(phone_number);
+            self.token_holders.insert(wallet_address, holder);
+        }
+        
+        Ok(verification_code)
+    }
+
+    // Подтверждение номера телефона
+    fn verify_phone_number(&mut self, phone_number: String, verification_code: String) -> Result<(), String> {
+        if let Some(user) = self.authorized_users.get_mut(&phone_number) {
+            user.verify(&verification_code)?;
+            Ok(())
+        } else {
+            Err("Phone number not found".to_string())
+        }
+    }
+
+    // Перенос баланса с неавторизованного кошелька на авторизованный
+    fn transfer_balance_from_check(&mut self, check_id: String, to_phone_number: String) -> Result<String, String> {
+        // Проверяем, что получатель авторизован
+        let authorized_user = self.authorized_users.get(&to_phone_number)
+            .ok_or("Phone number not authorized")?;
+        
+        if !authorized_user.is_verified {
+            return Err("Phone number not verified".to_string());
+        }
+
+        // Находим чек в системе
+        let mut found_check: Option<Check> = None;
+        let mut from_wallet: Option<String> = None;
+        
+        for (wallet, holder) in &self.token_holders {
+            if let Some(check) = holder.checks.iter().find(|c| c.check_id == check_id) {
+                if check.is_claimed {
+                    return Err("Check already claimed".to_string());
+                }
+                if check.is_activated {
+                    return Err("Check already activated".to_string());
+                }
+                found_check = Some(check.clone());
+                from_wallet = Some(wallet.clone());
+                break;
+            }
+        }
+
+        let check = found_check.ok_or("Check not found")?;
+        let from_wallet = from_wallet.unwrap();
+
+        // Проверяем ограничения на владение токенами
+        let total_security_tokens: f64 = self.token_holders.values().map(|v| v.security_tokens).sum();
+        let total_utility_tokens = self.utility_token.total_supply;
+        
+        let security_tokens_to_transfer = check.amount;
+        let utility_tokens_to_transfer = check.amount * 0.1;
+
+        // Проверяем, не превысит ли перенос максимальную долю владения
+        if let Some(to_holder) = self.token_holders.get(&authorized_user.wallet_address) {
+            // Токены уже существуют в системе, поэтому общее количество не меняется
+            let new_security_percentage = ((to_holder.security_tokens + security_tokens_to_transfer) / total_security_tokens) * 100.0;
+            let new_utility_percentage = ((to_holder.utility_tokens + utility_tokens_to_transfer) / total_utility_tokens) * 100.0;
+            
+            // Определяем максимальный лимит в зависимости от роли пользователя
+            let max_percentage = if to_holder.is_main_owner {
+                self.max_owner_percentage
+            } else if to_holder.is_franchise_owner {
+                self.max_franchise_percentage
+            } else {
+                self.max_customer_percentage
+            };
+            
+            if new_security_percentage > max_percentage + 0.01 || new_utility_percentage > max_percentage + 0.01 {
+                return Err(format!("Transfer would exceed maximum ownership percentage of {}%", max_percentage));
+            }
+        }
+
+        // Создаем запись о переносе
+        let transfer_id = Self::generate_transfer_id(&check_id, &to_phone_number);
+        let transfer_record = BalanceTransferRecord {
+            transfer_id: transfer_id.clone(),
+            from_check_id: check_id.clone(),
+            from_wallet: from_wallet.clone(),
+            to_wallet: authorized_user.wallet_address.clone(),
+            to_phone: to_phone_number.clone(),
+            security_tokens_transferred: security_tokens_to_transfer,
+            utility_tokens_transferred: utility_tokens_to_transfer,
+            timestamp: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+            status: TransferStatus::Pending,
+        };
+
+        // Выполняем перенос
+        // Удаляем токены с исходного кошелька
+        if let Some(from_holder) = self.token_holders.get_mut(&from_wallet) {
+            from_holder.security_tokens -= security_tokens_to_transfer;
+            from_holder.utility_tokens -= utility_tokens_to_transfer;
+            
+            // Помечаем чек как использованный
+            if let Some(check) = from_holder.checks.iter_mut().find(|c| c.check_id == check_id) {
+                check.is_claimed = true;
+            }
+        }
+
+        // Добавляем токены на целевой кошелек
+        if let Some(to_holder) = self.token_holders.get_mut(&authorized_user.wallet_address) {
+            to_holder.add_security_tokens(security_tokens_to_transfer);
+            to_holder.add_utility_tokens(utility_tokens_to_transfer);
+        } else {
+            let mut new_holder = TokenHolder::new(authorized_user.wallet_address.clone(), false);
+            new_holder.authorize_with_phone(to_phone_number.clone());
+            new_holder.add_security_tokens(security_tokens_to_transfer);
+            new_holder.add_utility_tokens(utility_tokens_to_transfer);
+            self.token_holders.insert(authorized_user.wallet_address.clone(), new_holder);
+        }
+
+        // Обновляем статус переноса
+        let mut final_record = transfer_record;
+        final_record.status = TransferStatus::Completed;
+        self.balance_transfer_history.push(final_record);
+
+        // Обновляем роли
+        self.update_roles();
+
+        Ok(transfer_id)
+    }
+
+    fn generate_transfer_id(check_id: &str, phone_number: &str) -> String {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let data = format!("{}{}{}", check_id, phone_number, timestamp);
+        let mut hasher = Sha256::new();
+        hasher.update(data.as_bytes());
+        format!("TRANSFER_{}", hex::encode(&hasher.finalize()[..8]))
+    }
+
+    // Получение истории переносов баланса
+    fn get_balance_transfer_history(&self, limit: Option<u32>) -> Vec<BalanceTransferRecord> {
+        let limit = limit.unwrap_or(100);
+        let mut history = self.balance_transfer_history.clone();
+        history.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        history.truncate(limit as usize);
+        history
+    }
+
+    // Проверка ограничений токенов и создание алертов
+    fn check_token_limits_and_create_alerts(&mut self) {
+        let total_security_tokens: f64 = self.token_holders.values().map(|v| v.security_tokens).sum();
+        let total_utility_tokens = self.utility_token.total_supply;
+        
+        // Собираем информацию о держателях токенов
+        let mut alerts_to_create = Vec::new();
+        
+        for (address, holder) in &self.token_holders {
+            let security_percentage = (holder.security_tokens / total_security_tokens) * 100.0;
+            let utility_percentage = (holder.utility_tokens / total_utility_tokens) * 100.0;
+            
+            // Проверяем ограничения для владельца
+            if holder.is_main_owner && security_percentage > self.max_owner_percentage + 0.01 {
+                alerts_to_create.push((
+                    AlertType::OwnerExceedsLimit,
+                    AlertSeverity::Critical,
+                    format!("Владелец превысил лимит: {:.2}% > {:.2}%", security_percentage, self.max_owner_percentage),
+                    Some(address.clone()),
+                    Some(security_percentage),
+                ));
+            }
+            
+            // Проверяем ограничения для владельцев франшиз
+            if holder.is_franchise_owner && security_percentage > self.max_franchise_percentage + 0.01 {
+                alerts_to_create.push((
+                    AlertType::FranchiseExceedsLimit,
+                    AlertSeverity::High,
+                    format!("Владелец франшизы превысил лимит: {:.2}% > {:.2}%", security_percentage, self.max_franchise_percentage),
+                    Some(address.clone()),
+                    Some(security_percentage),
+                ));
+            }
+            
+            // Проверяем ограничения для покупателей
+            if !holder.is_main_owner && !holder.is_charity_fund && !holder.is_franchise_owner && security_percentage > self.max_customer_percentage + 0.01 {
+                alerts_to_create.push((
+                    AlertType::CustomerExceedsLimit,
+                    AlertSeverity::High,
+                    format!("Покупатель превысил лимит: {:.2}% > {:.2}%", security_percentage, self.max_customer_percentage),
+                    Some(address.clone()),
+                    Some(security_percentage),
+                ));
+            }
+            
+            // Проверяем концентрацию utility токенов
+            if utility_percentage > 30.0 {
+                alerts_to_create.push((
+                    AlertType::TokenConcentration,
+                    AlertSeverity::Medium,
+                    format!("Высокая концентрация utility токенов: {:.2}%", utility_percentage),
+                    Some(address.clone()),
+                    Some(utility_percentage),
+                ));
+            }
+        }
+        
+        // Проверяем благотворительный фонд
+        let charity_percentage = (self.charity_fund.total_donations / total_security_tokens) * 100.0;
+        if charity_percentage < self.charity_percentage * 0.8 { // Если меньше 80% от ожидаемого
+            alerts_to_create.push((
+                AlertType::CharityFundLow,
+                AlertSeverity::Low,
+                format!("Благотворительный фонд получает меньше ожидаемого: {:.2}% < {:.2}%", charity_percentage, self.charity_percentage),
+                Some(self.charity_fund.fund_id.clone()),
+                Some(charity_percentage),
+            ));
+        }
+        
+        // Создаем алерты
+        for (alert_type, severity, message, affected_wallet, percentage) in alerts_to_create {
+            self.create_alert(alert_type, severity, message, affected_wallet, percentage);
+        }
+    }
+    
+    // Создание алерта мониторинга
+    fn create_alert(&mut self, alert_type: AlertType, severity: AlertSeverity, message: String, affected_wallet: Option<String>, percentage: Option<f64>) {
+        let alert_id = format!("ALERT_{}", SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+        let alert = MonitoringAlert {
+            alert_id,
+            alert_type,
+            severity,
+            message,
+            affected_wallet,
+            percentage,
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            is_resolved: false,
+        };
+        self.monitoring_alerts.push(alert);
+    }
+    
+    // Добавление франшизной ноды
+    fn add_franchise_node(&mut self, node_id: String, franchise_owner: String) -> Result<(), String> {
+        if self.franchise_nodes.contains_key(&node_id) {
+            return Err("Node already exists".to_string());
+        }
+        
+        self.franchise_nodes.insert(node_id.clone(), franchise_owner.clone());
+        
+        // Создаем держателя токенов для владельца франшизы, если его еще нет
+        if !self.token_holders.contains_key(&franchise_owner) {
+            let mut franchise_holder = TokenHolder::new_franchise_owner(franchise_owner.clone(), vec![node_id]);
+            self.token_holders.insert(franchise_owner, franchise_holder);
+        } else {
+            // Добавляем ноду к существующему владельцу франшизы
+            if let Some(holder) = self.token_holders.get_mut(&franchise_owner) {
+                holder.franchise_nodes.push(node_id);
+            }
+        }
+        
+        Ok(())
+    }
+    
+    // Эмиссия токенов для привлечения китов-инвесторов
+    fn emit_tokens_for_investors(&mut self, amount: f64, investor_address: String) -> Result<(), String> {
+        // Новая логика эмиссии для "китов": 48% владелец сети, 3% фонд, 49% инвестор
+        let main_owner_tokens = amount * 0.48; // 48% владельцу сети
+        let charity_tokens = amount * 0.03; // 3% фонду
+        let investor_tokens = amount * 0.49; // 49% инвестору
+        
+        let utility_tokens = amount * 0.1; // 10% utility токенов для голосования
+        
+        // Проверяем, что владелец не превысит лимит после эмиссии
+        let current_owner_tokens = self.token_holders.get(&self.main_owner).map(|h| h.security_tokens).unwrap_or(0.0);
+        let total_tokens: f64 = self.token_holders.values().map(|h| h.security_tokens).sum();
+        let new_total = total_tokens + main_owner_tokens + charity_tokens + investor_tokens;
+        let new_owner_percentage = ((current_owner_tokens + main_owner_tokens) / new_total) * 100.0;
+        
+        if new_owner_percentage > self.max_owner_percentage + 0.01 {
+            return Err(format!("Эмиссия приведет к превышению лимита владельца: {:.2}% > {:.2}%", new_owner_percentage, self.max_owner_percentage));
+        }
+        
+        // 1. Владелец сети получает 48%
+        if !self.token_holders.contains_key(&self.main_owner) {
+            let mut new_holder = TokenHolder::new(self.main_owner.clone(), true);
+            new_holder.add_security_tokens(main_owner_tokens);
+            self.token_holders.insert(self.main_owner.clone(), new_holder);
+        } else {
+            if let Some(holder) = self.token_holders.get_mut(&self.main_owner) {
+                holder.add_security_tokens(main_owner_tokens);
+            }
+        }
+        
+        // 2. Благотворительный фонд получает 3%
+        let charity_address = self.charity_fund.fund_id.clone();
+        if let Some(charity_holder) = self.token_holders.get_mut(&charity_address) {
+            charity_holder.add_security_tokens(charity_tokens);
+        }
+        self.charity_fund.add_donation(charity_tokens);
+        
+        // 3. Инвестор получает 49%
+        if !self.token_holders.contains_key(&investor_address) {
+            let mut investor_holder = TokenHolder::new(investor_address.clone(), false);
+            investor_holder.add_security_tokens(investor_tokens);
+            self.token_holders.insert(investor_address.clone(), investor_holder);
+        } else {
+            if let Some(holder) = self.token_holders.get_mut(&investor_address) {
+                holder.add_security_tokens(investor_tokens);
+            }
+        }
+        
+        // Issue utility tokens for voting
+        let voting_power = self.utility_token.issue_voting_tokens(utility_tokens);
+        
+        // Utility токены распределяются пропорционально security токенам
+        let total_security = main_owner_tokens + charity_tokens + investor_tokens;
+        let main_owner_utility = (main_owner_tokens / total_security) * voting_power;
+        let charity_utility = (charity_tokens / total_security) * voting_power;
+        let investor_utility = (investor_tokens / total_security) * voting_power;
+        
+        // Добавляем utility токены
+        if let Some(main_owner_holder) = self.token_holders.get_mut(&self.main_owner) {
+            main_owner_holder.add_utility_tokens(main_owner_utility);
+        }
+        
+        if let Some(charity_holder) = self.token_holders.get_mut(&charity_address) {
+            charity_holder.add_utility_tokens(charity_utility);
+        }
+        
+        if let Some(investor_holder) = self.token_holders.get_mut(&investor_address) {
+            investor_holder.add_utility_tokens(investor_utility);
+        }
+        
+        // Проверяем ограничения после эмиссии
+        self.check_token_limits_and_create_alerts();
+        
+        Ok(())
+    }
+    
+    // Получение алертов мониторинга
+    fn get_monitoring_alerts(&self, limit: Option<u32>) -> Vec<MonitoringAlert> {
+        let limit = limit.unwrap_or(100);
+        let mut alerts = self.monitoring_alerts.clone();
+        alerts.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
+        alerts.truncate(limit as usize);
+        alerts
+    }
+    
+    // Распределение невостребованных токенов в конце года
+    fn distribute_unclaimed_tokens_annually(&mut self) -> Result<AnnualDistribution, String> {
+        let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        
+        // Находим все невостребованные токены, которые истекли
+        let mut unclaimed_to_distribute: Vec<UnclaimedTokensRecord> = self.unclaimed_tokens
+            .iter()
+            .filter(|record| !record.is_distributed && record.expiry_timestamp <= current_timestamp)
+            .cloned()
+            .collect();
+        
+        if unclaimed_to_distribute.is_empty() {
+            return Err("Нет невостребованных токенов для распределения".to_string());
+        }
+        
+        let total_unclaimed: f64 = unclaimed_to_distribute.iter().map(|r| r.amount).sum();
+        
+        // Вычисляем общее количество токенов для пропорционального распределения
+        let total_security_tokens: f64 = self.token_holders.values().map(|h| h.security_tokens).sum();
+        
+        let mut distributions = Vec::new();
+        
+        // Собираем информацию о держателях токенов
+        let mut holder_info = Vec::new();
+        for (address, holder) in &self.token_holders {
+            let holder_percentage = (holder.security_tokens / total_security_tokens) * 100.0;
+            let distribution_amount = (holder_percentage / 100.0) * total_unclaimed;
+            
+            if distribution_amount > 0.0 {
+                let recipient_type = if holder.is_main_owner {
+                    RecipientType::MainOwner
+                } else if holder.is_charity_fund {
+                    RecipientType::CharityFund
+                } else if holder.is_franchise_owner {
+                    RecipientType::FranchiseOwner
+                } else {
+                    RecipientType::Customer
+                };
+                
+                distributions.push(TokenDistribution {
+                    recipient_address: address.clone(),
+                    amount: distribution_amount,
+                    percentage: holder_percentage,
+                    recipient_type,
+                });
+                
+                holder_info.push((address.clone(), distribution_amount));
+            }
+        }
+        
+        // Добавляем токены держателям
+        for (address, amount) in holder_info {
+            if let Some(holder_mut) = self.token_holders.get_mut(&address) {
+                holder_mut.add_security_tokens(amount);
+            }
+        }
+        
+        // Создаем запись о годовом распределении
+        let annual_distribution = AnnualDistribution {
+            year: self.current_year,
+            total_unclaimed_tokens: total_unclaimed,
+            distribution_timestamp: current_timestamp,
+            distributions: distributions.clone(),
+        };
+        
+        // Отмечаем токены как распределенные
+        for unclaimed_record in &mut self.unclaimed_tokens {
+            if !unclaimed_record.is_distributed && unclaimed_record.expiry_timestamp <= current_timestamp {
+                unclaimed_record.is_distributed = true;
+                unclaimed_record.distributed_timestamp = Some(current_timestamp);
+            }
+        }
+        
+        self.annual_distributions.push(annual_distribution.clone());
+        
+        // Проверяем ограничения после распределения
+        self.check_token_limits_and_create_alerts();
+        
+        Ok(annual_distribution)
+    }
+    
+    // Получение невостребованных токенов
+    fn get_unclaimed_tokens(&self, limit: Option<u32>) -> Vec<UnclaimedTokensRecord> {
+        let limit = limit.unwrap_or(100);
+        let mut unclaimed = self.unclaimed_tokens.clone();
+        unclaimed.sort_by(|a, b| b.created_timestamp.cmp(&a.created_timestamp));
+        unclaimed.truncate(limit as usize);
+        unclaimed
+    }
+    
+    // Получение истории годовых распределений
+    fn get_annual_distributions(&self, limit: Option<u32>) -> Vec<AnnualDistribution> {
+        let limit = limit.unwrap_or(10);
+        let mut distributions = self.annual_distributions.clone();
+        distributions.sort_by(|a, b| b.year.cmp(&a.year));
+        distributions.truncate(limit as usize);
+        distributions
+    }
+    
+    // Проверка истечения невостребованных токенов
+    fn check_expired_unclaimed_tokens(&mut self) -> Vec<String> {
+        let current_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let mut expired_checks = Vec::new();
+        
+        for record in &self.unclaimed_tokens {
+            if !record.is_distributed && record.expiry_timestamp <= current_timestamp {
+                expired_checks.push(record.check_id.clone());
+            }
+        }
+        
+        expired_checks
+    }
+    
+    // Проверка безопасности сети
+    fn check_network_security(&self) -> NetworkSecurityReport {
+        let total_security_tokens: f64 = self.token_holders.values().map(|v| v.security_tokens).sum();
+        let total_utility_tokens = self.utility_token.total_supply;
+        
+        let mut security_risks = Vec::new();
+        let mut utility_risks = Vec::new();
+        
+        for (address, holder) in &self.token_holders {
+            let security_percentage = (holder.security_tokens / total_security_tokens) * 100.0;
+            let utility_percentage = (holder.utility_tokens / total_utility_tokens) * 100.0;
+            
+            // Определяем максимальный лимит в зависимости от роли пользователя
+            let max_percentage = if holder.is_main_owner {
+                self.max_owner_percentage
+            } else if holder.is_franchise_owner {
+                self.max_franchise_percentage
+            } else {
+                self.max_customer_percentage
+            };
+            
+            if security_percentage > max_percentage + 0.01 {
+                security_risks.push(OwnershipRisk {
+                    wallet: address.clone(),
+                    percentage: security_percentage,
+                    token_type: "Security".to_string(),
+                });
+            }
+            
+            if utility_percentage > max_percentage + 0.01 {
+                utility_risks.push(OwnershipRisk {
+                    wallet: address.clone(),
+                    percentage: utility_percentage,
+                    token_type: "Utility".to_string(),
+                });
+            }
+        }
+        
+        NetworkSecurityReport {
+            total_security_tokens,
+            total_utility_tokens,
+            max_owner_percentage: self.max_owner_percentage,
+            security_risks: security_risks.clone(),
+            utility_risks: utility_risks.clone(),
+            is_secure: security_risks.is_empty() && utility_risks.is_empty(),
+        }
+    }
 }
 
 // Block structure (simplified for this example)
@@ -1136,6 +1951,19 @@ enum ApiRequest {
     },
     MakeItemAvailableForVoting { menu_item_id: String },
     ConfirmOrder { order_id: String },
+    RegisterUserWithPhone { phone_number: String, wallet_address: String },
+    VerifyPhoneNumber { phone_number: String, verification_code: String },
+    TransferBalanceFromCheck { check_id: String, to_phone_number: String },
+    GetBalanceTransferHistory { limit: Option<u32> },
+    GetNetworkSecurityReport,
+    AddFranchiseNode { node_id: String, franchise_owner: String },
+    EmitTokensForInvestors { amount: f64, investor_address: String },
+    GetMonitoringAlerts { limit: Option<u32> },
+    GetCharityFundInfo,
+    DistributeUnclaimedTokensAnnually,
+    GetUnclaimedTokens { limit: Option<u32> },
+    GetAnnualDistributions { limit: Option<u32> },
+    CheckExpiredUnclaimedTokens,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1160,6 +1988,19 @@ enum ApiResponse {
     MenuItemAdded { success: bool },
     ItemAvailableForVoting { success: bool },
     OrderConfirmed { success: bool },
+    UserRegistered { verification_code: String },
+    PhoneVerified { success: bool },
+    BalanceTransferred { transfer_id: String },
+    BalanceTransferHistory { transfers: Vec<BalanceTransferRecord> },
+    NetworkSecurityReport { report: NetworkSecurityReport },
+    FranchiseNodeAdded { success: bool },
+    TokensEmitted { success: bool },
+    MonitoringAlerts { alerts: Vec<MonitoringAlert> },
+    CharityFundInfo { fund: CharityFund },
+    UnclaimedTokensDistributed { distribution: AnnualDistribution },
+    UnclaimedTokens { tokens: Vec<UnclaimedTokensRecord> },
+    AnnualDistributions { distributions: Vec<AnnualDistribution> },
+    ExpiredUnclaimedTokens { expired_checks: Vec<String> },
     Error { message: String },
 }
 
@@ -1182,6 +2023,109 @@ struct VotingRecord {
     vote_weight: f64,
     vote_for: bool,
     timestamp: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct BalanceTransferRecord {
+    transfer_id: String,
+    from_check_id: String,
+    from_wallet: String,
+    to_wallet: String,
+    to_phone: String,
+    security_tokens_transferred: f64,
+    utility_tokens_transferred: f64,
+    timestamp: u64,
+    status: TransferStatus,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+enum TransferStatus {
+    Pending,
+    Completed,
+    Failed,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct NetworkSecurityReport {
+    total_security_tokens: f64,
+    total_utility_tokens: f64,
+    max_owner_percentage: f64,
+    security_risks: Vec<OwnershipRisk>,
+    utility_risks: Vec<OwnershipRisk>,
+    is_secure: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct OwnershipRisk {
+    wallet: String,
+    percentage: f64,
+    token_type: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MonitoringAlert {
+    alert_id: String,
+    alert_type: AlertType,
+    severity: AlertSeverity,
+    message: String,
+    affected_wallet: Option<String>,
+    percentage: Option<f64>,
+    timestamp: u64,
+    is_resolved: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UnclaimedTokensRecord {
+    check_id: String,
+    amount: f64,
+    created_timestamp: u64,
+    expiry_timestamp: u64,
+    is_distributed: bool,
+    distributed_timestamp: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AnnualDistribution {
+    year: u32,
+    total_unclaimed_tokens: f64,
+    distribution_timestamp: u64,
+    distributions: Vec<TokenDistribution>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct TokenDistribution {
+    recipient_address: String,
+    amount: f64,
+    percentage: f64,
+    recipient_type: RecipientType,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum RecipientType {
+    MainOwner,
+    CharityFund,
+    FranchiseOwner,
+    Customer,
+    Investor,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, Hash, PartialEq)]
+enum AlertType {
+    OwnerExceedsLimit,
+    FranchiseExceedsLimit,
+    CustomerExceedsLimit,
+    CharityFundLow,
+    CoordinatedAttack,
+    TokenConcentration,
+    NetworkAnomaly,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum AlertSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
 }
 
 // Децентрализованные смарт-контракты
@@ -1545,6 +2489,83 @@ impl ApiServer {
                     Ok(()) => ApiResponse::OrderConfirmed { success: true },
                     Err(e) => ApiResponse::Error { message: e },
                 }
+            }
+            
+            ApiRequest::RegisterUserWithPhone { phone_number, wallet_address } => {
+                match blockchain_guard.register_user_with_phone(phone_number, wallet_address) {
+                    Ok(verification_code) => ApiResponse::UserRegistered { verification_code },
+                    Err(e) => ApiResponse::Error { message: e },
+                }
+            }
+            
+            ApiRequest::VerifyPhoneNumber { phone_number, verification_code } => {
+                match blockchain_guard.verify_phone_number(phone_number, verification_code) {
+                    Ok(()) => ApiResponse::PhoneVerified { success: true },
+                    Err(e) => ApiResponse::Error { message: e },
+                }
+            }
+            
+            ApiRequest::TransferBalanceFromCheck { check_id, to_phone_number } => {
+                match blockchain_guard.transfer_balance_from_check(check_id, to_phone_number) {
+                    Ok(transfer_id) => ApiResponse::BalanceTransferred { transfer_id },
+                    Err(e) => ApiResponse::Error { message: e },
+                }
+            }
+            
+            ApiRequest::GetBalanceTransferHistory { limit } => {
+                let transfers = blockchain_guard.get_balance_transfer_history(limit);
+                ApiResponse::BalanceTransferHistory { transfers }
+            }
+            
+            ApiRequest::GetNetworkSecurityReport => {
+                let report = blockchain_guard.check_network_security();
+                ApiResponse::NetworkSecurityReport { report }
+            }
+            
+            ApiRequest::AddFranchiseNode { node_id, franchise_owner } => {
+                match blockchain_guard.add_franchise_node(node_id, franchise_owner) {
+                    Ok(()) => ApiResponse::FranchiseNodeAdded { success: true },
+                    Err(e) => ApiResponse::Error { message: e },
+                }
+            }
+            
+            ApiRequest::EmitTokensForInvestors { amount, investor_address } => {
+                match blockchain_guard.emit_tokens_for_investors(amount, investor_address) {
+                    Ok(()) => ApiResponse::TokensEmitted { success: true },
+                    Err(e) => ApiResponse::Error { message: e },
+                }
+            }
+            
+            ApiRequest::GetMonitoringAlerts { limit } => {
+                let alerts = blockchain_guard.get_monitoring_alerts(limit);
+                ApiResponse::MonitoringAlerts { alerts }
+            }
+            
+            ApiRequest::GetCharityFundInfo => {
+                let fund = blockchain_guard.charity_fund.clone();
+                ApiResponse::CharityFundInfo { fund }
+            }
+            
+            ApiRequest::DistributeUnclaimedTokensAnnually => {
+                match blockchain_guard.distribute_unclaimed_tokens_annually() {
+                    Ok(distribution) => ApiResponse::UnclaimedTokensDistributed { distribution },
+                    Err(e) => ApiResponse::Error { message: e },
+                }
+            }
+            
+            ApiRequest::GetUnclaimedTokens { limit } => {
+                let tokens = blockchain_guard.get_unclaimed_tokens(limit);
+                ApiResponse::UnclaimedTokens { tokens }
+            }
+            
+            ApiRequest::GetAnnualDistributions { limit } => {
+                let distributions = blockchain_guard.get_annual_distributions(limit);
+                ApiResponse::AnnualDistributions { distributions }
+            }
+            
+            ApiRequest::CheckExpiredUnclaimedTokens => {
+                let expired_checks = blockchain_guard.check_expired_unclaimed_tokens();
+                ApiResponse::ExpiredUnclaimedTokens { expired_checks }
             }
         }
     }
@@ -2269,10 +3290,315 @@ fn main() {
         api_server.start();
         return;
     }
+
+    // Optional: start Franchise Network API when FRANCHISE_API=1
+    if env::var("FRANCHISE_API").map(|v| v == "1").unwrap_or(false) {
+        println!("🏪 Starting Franchise Network API on port 3001...");
+        
+        // Создаем франшизную сеть
+        let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
+        
+        // Демонстрация работы сети
+        demo_franchise_network(&franchise_network);
+        
+        // Запускаем POS API сервер
+        let pos_api_server = PosApiServer::new(franchise_network, 3001);
+        pos_api_server.start();
+        return;
+    }
+
+    // Optional: start P2P Network when P2P_NETWORK=1
+    if env::var("P2P_NETWORK").map(|v| v == "1").unwrap_or(false) {
+        println!("🌐 Starting P2P Network...");
+        
+        // Создаем франшизную сеть
+        let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
+        
+        // Демонстрация работы сети
+        demo_franchise_network(&franchise_network);
+        
+        // Создаем P2P узел
+        let node_id = env::var("NODE_ID").unwrap_or_else(|_| "1".to_string()).parse::<u64>().unwrap_or(1);
+        let port = env::var("P2P_PORT").unwrap_or_else(|_| "8080".to_string()).parse::<u16>().unwrap_or(8080);
+        let address = format!("127.0.0.1:{}", port).parse().unwrap();
+        
+        let p2p_node = P2PNode::new(node_id, address, franchise_network);
+        
+        println!("🚀 Starting P2P Node {} on {}", node_id, address);
+        p2p_node.start();
+        return;
+    }
+
+    // Optional: start Full Decentralized Network when FULL_DECENTRALIZED=1
+    if env::var("FULL_DECENTRALIZED").map(|v| v == "1").unwrap_or(false) {
+        println!("🌐 Starting Full Decentralized Network...");
+        
+        // Создаем франшизную сеть
+        let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
+        
+        // Демонстрация работы сети
+        demo_franchise_network(&franchise_network);
+        
+        // Создаем IPFS хранилище
+        let mut ipfs_storage = IPFSStorage::new("https://ipfs.io/ipfs/".to_string());
+        
+        // Демонстрация IPFS
+        demo_ipfs_storage(&mut ipfs_storage, &franchise_network);
+        
+        // Создаем P2P узел с IPFS
+        let node_id = env::var("NODE_ID").unwrap_or_else(|_| "1".to_string()).parse::<u64>().unwrap_or(1);
+        let port = env::var("P2P_PORT").unwrap_or_else(|_| "8080".to_string()).parse::<u16>().unwrap_or(8080);
+        let address = format!("127.0.0.1:{}", port).parse().unwrap();
+        
+        let p2p_node = P2PNode::new(node_id, address, franchise_network);
+        
+        println!("🚀 Starting Full Decentralized Node {} on {}", node_id, address);
+        p2p_node.start();
+        return;
+    }
     
     // Start UI
     let mut ui = UI::new(blockchain);
     ui.run();
+}
+
+// Демонстрация работы франшизной сети
+fn demo_franchise_network(franchise_network: &Arc<Mutex<FranchiseNetwork>>) {
+    println!("\n🏪 === FRANCHISE NETWORK DEMO ===");
+    
+    let mut network = franchise_network.lock().unwrap();
+    
+    // 1. Регистрируем POS системы
+    network.whitelist_pos("POS_Tbilisi_001".to_string());
+    network.whitelist_pos("POS_Batumi_001".to_string());
+    network.whitelist_pos("POS_Kutaisi_001".to_string());
+    println!("✅ Whitelisted POS systems");
+    
+    // 2. Регистрируем ноды
+    let node1 = network.register_node(
+        "owner_tbilisi_central".to_string(),
+        NodeType::OWNER,
+        "Tbilisi".to_string()
+    ).unwrap();
+    println!("✅ Registered OWNER node {} in Tbilisi", node1);
+    
+    let node2 = network.register_node(
+        "franchisee_batumi".to_string(),
+        NodeType::FRANCHISE,
+        "Batumi".to_string()
+    ).unwrap();
+    println!("✅ Registered FRANCHISE node {} in Batumi", node2);
+    
+    let node3 = network.register_node(
+        "franchisee_kutaisi".to_string(),
+        NodeType::FRANCHISE,
+        "Kutaisi".to_string()
+    ).unwrap();
+    println!("✅ Registered FRANCHISE node {} in Kutaisi", node3);
+    
+    // 3. Демонстрируем продажи
+    println!("\n💰 === SALES DEMONSTRATION ===");
+    
+    // Продажа в собственной точке (OWNER)
+    let sale1 = network.record_sale(
+        node1,
+        "sale_tbilisi_001".to_string(),
+        25.50,
+        "Customer: John Doe, Phone: +995123456789".to_string(),
+        "POS_Tbilisi_001".to_string(),
+        vec![
+            SaleItem { item_id: "khinkali_001".to_string(), quantity: 10, price: 15.0 },
+            SaleItem { item_id: "khachapuri_001".to_string(), quantity: 2, price: 10.5 },
+        ]
+    ).unwrap();
+    
+    println!("🍽️  Sale in OWNER node {}: {} GEL", node1, 25.50);
+    println!("   → Owner gets: {} subunits (0.51 tokens)", sale1.owner_units);
+    println!("   → Buyer gets: {} subunits (0.49 tokens)", sale1.buyer_units);
+    println!("   → Royalty: {} subunits", sale1.royalty_units);
+    
+    // Продажа во франшизной точке (FRANCHISE)
+    let sale2 = network.record_sale(
+        node2,
+        "sale_batumi_001".to_string(),
+        18.75,
+        "Customer: Maria Garcia, Email: maria@example.com".to_string(),
+        "POS_Batumi_001".to_string(),
+        vec![
+            SaleItem { item_id: "lobiani_001".to_string(), quantity: 3, price: 12.0 },
+            SaleItem { item_id: "mtsvadi_001".to_string(), quantity: 1, price: 6.75 },
+        ]
+    ).unwrap();
+    
+    println!("\n🍽️  Sale in FRANCHISE node {}: {} GEL", node2, 18.75);
+    println!("   → Franchisee gets: {} subunits (0.48 tokens)", sale2.owner_units);
+    println!("   → Master owner gets: {} subunits (0.03 tokens royalty)", sale2.royalty_units);
+    println!("   → Buyer gets: {} subunits (0.49 tokens)", sale2.buyer_units);
+    
+    // Еще одна продажа
+    let sale3 = network.record_sale(
+        node3,
+        "sale_kutaisi_001".to_string(),
+        32.00,
+        "Customer: Ahmed Hassan, Table: 5".to_string(),
+        "POS_Kutaisi_001".to_string(),
+        vec![
+            SaleItem { item_id: "chakapuli_001".to_string(), quantity: 1, price: 20.0 },
+            SaleItem { item_id: "mchadi_001".to_string(), quantity: 4, price: 12.0 },
+        ]
+    ).unwrap();
+    
+    println!("\n🍽️  Sale in FRANCHISE node {}: {} GEL", node3, 32.00);
+    println!("   → Franchisee gets: {} subunits (0.48 tokens)", sale3.owner_units);
+    println!("   → Master owner gets: {} subunits (0.03 tokens royalty)", sale3.royalty_units);
+    println!("   → Buyer gets: {} subunits (0.49 tokens)", sale3.buyer_units);
+    
+    // 4. Показываем статистику
+    let stats = network.get_network_stats();
+    println!("\n📊 === NETWORK STATISTICS ===");
+    println!("   Total nodes: {}", stats.total_nodes);
+    println!("   Active nodes: {}", stats.active_nodes);
+    println!("   Total sales: {}", stats.total_sales);
+    println!("   Total tokens minted: {} subunits ({} tokens)", 
+             stats.total_tokens_minted, 
+             stats.total_tokens_minted as f64 / 100.0);
+    println!("   Master owner balance: {} subunits ({} tokens)", 
+             stats.master_owner_balance,
+             stats.master_owner_balance as f64 / 100.0);
+    
+    // 5. Показываем балансы кошельков
+    println!("\n💳 === WALLET BALANCES ===");
+    println!("   Master owner: {} subunits", network.get_wallet_balance("master_owner_georgia"));
+    println!("   Tbilisi owner: {} subunits", network.get_wallet_balance("owner_tbilisi_central"));
+    println!("   Batumi franchisee: {} subunits", network.get_wallet_balance("franchisee_batumi"));
+    println!("   Kutaisi franchisee: {} subunits", network.get_wallet_balance("franchisee_kutaisi"));
+    
+    println!("\n🌐 Franchise Network API is ready on port 3001!");
+    println!("   Try: curl -X POST http://localhost:3001/ -H 'Content-Type: application/json' -d '{{\"GetNetworkStats\": null}}'");
+}
+
+// Демонстрация IPFS хранилища
+fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mutex<FranchiseNetwork>>) {
+    println!("\n📦 === IPFS STORAGE DEMO ===");
+    
+    // 1. Создаем пример меню
+    let menu_data = ipfs_storage::MenuData {
+        items: vec![
+            ipfs_storage::MenuItem {
+                id: "khinkali_001".to_string(),
+                name: "Хинкали".to_string(),
+                description: "Традиционные грузинские хинкали с мясом".to_string(),
+                price: 1.5,
+                category: "Основные блюда".to_string(),
+                ingredients: vec!["мука".to_string(), "говядина".to_string(), "лук".to_string()],
+                image_hash: Some("QmKhinkaliImage".to_string()),
+                nutritional_info: ipfs_storage::NutritionalInfo {
+                    calories: 250,
+                    protein: 15.0,
+                    carbs: 30.0,
+                    fat: 8.0,
+                    fiber: 2.0,
+                },
+            },
+            ipfs_storage::MenuItem {
+                id: "khachapuri_001".to_string(),
+                name: "Хачапури".to_string(),
+                description: "Грузинский сырный хлеб".to_string(),
+                price: 5.0,
+                category: "Основные блюда".to_string(),
+                ingredients: vec!["мука".to_string(), "сыр".to_string(), "яйцо".to_string()],
+                image_hash: Some("QmKhachapuriImage".to_string()),
+                nutritional_info: ipfs_storage::NutritionalInfo {
+                    calories: 400,
+                    protein: 20.0,
+                    carbs: 35.0,
+                    fat: 18.0,
+                    fiber: 3.0,
+                },
+            },
+        ],
+        categories: vec!["Основные блюда".to_string(), "Закуски".to_string(), "Напитки".to_string()],
+        last_updated: chrono::Utc::now().timestamp() as u64,
+        version: 1,
+    };
+    
+    // Сохраняем меню в IPFS
+    match ipfs_storage.store_menu(&menu_data) {
+        Ok(hash) => println!("✅ Menu stored in IPFS: {}", hash),
+        Err(e) => println!("❌ Failed to store menu: {}", e),
+    }
+    
+    // 2. Создаем отчет о продажах
+    let network = franchise_network.lock().unwrap();
+    match ipfs_storage.create_sales_report(1, &network, 30) {
+        Ok(report) => {
+            println!("📊 Created sales report for node 1:");
+            println!("   Total sales: {}", report.total_sales);
+            println!("   Total revenue: {:.2} GEL", report.total_revenue);
+            println!("   Top items: {}", report.top_items.len());
+            
+            // Сохраняем отчет в IPFS
+            match ipfs_storage.store_sales_report(&report) {
+                Ok(hash) => println!("✅ Sales report stored in IPFS: {}", hash),
+                Err(e) => println!("❌ Failed to store sales report: {}", e),
+            }
+        }
+        Err(e) => println!("❌ Failed to create sales report: {}", e),
+    }
+    
+    // 3. Создаем глобальный отчет сети
+    match ipfs_storage.create_network_report(&network) {
+        Ok(network_report) => {
+            println!("🌐 Created network report:");
+            println!("   Total nodes: {}", network_report.total_nodes);
+            println!("   Active nodes: {}", network_report.active_nodes);
+            println!("   Total sales: {}", network_report.total_sales);
+            println!("   Total revenue: {:.2} GEL", network_report.total_revenue);
+            println!("   Cities: {}", network_report.city_breakdown.len());
+        }
+        Err(e) => println!("❌ Failed to create network report: {}", e),
+    }
+    
+    // 4. Синхронизация с IPFS сетью
+    match ipfs_storage.sync_with_network() {
+        Ok(new_hashes) => {
+            println!("🔄 Synced with IPFS network, found {} new files", new_hashes.len());
+        }
+        Err(e) => println!("❌ Failed to sync with IPFS: {}", e),
+    }
+    
+    // 5. Показываем статистику хранилища
+    let stats = ipfs_storage.get_storage_stats();
+    println!("\n📈 === IPFS STORAGE STATS ===");
+    println!("   Total files: {}", stats.total_files);
+    println!("   Total size: {} bytes", stats.total_size);
+    println!("   Pinned hashes: {}", stats.pinned_hashes);
+    println!("   Gateway URL: {}", stats.gateway_url);
+    
+    drop(network);
+    
+    // Запускаем веб-сервер для обслуживания HTML интерфейсов
+    println!("\n🌐 === ЗАПУСК ВЕБ-СЕРВЕРА ===");
+    let web_server = WebServer::new(8080);
+    
+    // Запускаем веб-сервер в отдельном потоке
+    thread::spawn(move || {
+        web_server.start();
+    });
+    
+    println!("✅ Веб-сервер запущен на http://127.0.0.1:8080");
+    println!("📱 Доступные интерфейсы:");
+    println!("   • Главная страница: http://127.0.0.1:8080/");
+    println!("   • Владелец сети: http://127.0.0.1:8080/owner_dashboard.html");
+    println!("   • Владелец франшизы: http://127.0.0.1:8080/franchise_dashboard.html");
+    println!("   • Покупатель: http://127.0.0.1:8080/customer_wallet.html");
+    println!("   • Старый интерфейс владельца: http://127.0.0.1:8080/restaurant_owner.html");
+    println!("   • Старый интерфейс кошелька: http://127.0.0.1:8080/wallet_interface.html");
+    
+    // Оставляем программу запущенной
+    loop {
+        thread::sleep(std::time::Duration::from_secs(1));
+    }
 }
 
 #[cfg(test)]
@@ -2282,4 +3608,10 @@ mod tests {
     mod orders;
     mod blockchain;
     mod api;
+    mod security;
+    mod attack_scenarios;
+    mod control_package_analysis;
+    mod load_testing;
+    mod new_token_distribution;
+    mod unclaimed_tokens_distribution;
 }
