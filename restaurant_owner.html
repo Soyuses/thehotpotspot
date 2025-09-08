@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерфейс владельца ресторана</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #ff6b6b;
+            color: #ff6b6b;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .ingredient-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .ingredient-item input {
+            width: 30%;
+            margin: 0 5px;
+        }
+
+        .add-ingredient {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .remove-ingredient {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ Управление рестораном</h1>
+            <p>Интерфейс владельца ресторана</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('menu')">Прейскурант</button>
+            <button class="tab" onclick="showTab('orders')">Заказы</button>
+            <button class="tab" onclick="showTab('voting')">Голосование</button>
+        </div>
+
+        <!-- Прейскурант -->
+        <div id="menu" class="tab-content active">
+            <h2>Управление прейскурантом</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Добавить позицию вручную</h3>
+                    <form id="menuForm">
+                        <div class="form-group">
+                            <label>Название блюда:</label>
+                            <input type="text" id="dishName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Описание:</label>
+                            <textarea id="dishDescription" rows="3"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Цена ($):</label>
+                            <input type="number" id="dishPrice" step="0.01" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Доступность (штук):</label>
+                            <input type="number" id="dishAvailability" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Приоритетность (1-10):</label>
+                            <input type="number" id="dishPriority" min="1" max="10" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Время готовки (минуты):</label>
+                            <input type="number" id="cookingTime" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Ингредиенты:</label>
+                            <div id="ingredientsList"></div>
+                            <button type="button" class="add-ingredient" onclick="addIngredient()">+ Добавить ингредиент</button>
+                        </div>
+                        
+                        <button type="submit" class="btn">Добавить в прейскурант</button>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <h3>Текущий прейскурант</h3>
+                    <div id="menuList">
+                        <p>Загрузка меню...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Заказы -->
+        <div id="orders" class="tab-content">
+            <h2>Управление заказами</h2>
+            
+            <div class="card">
+                <h3>Все заказы</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID заказа</th>
+                            <th>Клиент</th>
+                            <th>Сумма</th>
+                            <th>Статус</th>
+                            <th>Время доставки</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <tr>
+                            <td colspan="6">Загрузка заказов...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Голосование -->
+        <div id="voting" class="tab-content">
+            <h2>Управление голосованием</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Новые блюда для голосования</h3>
+                    <div id="votingItems">
+                        <p>Загрузка позиций...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Активное голосование</h3>
+                    <div id="activeVoting">
+                        <p>Загрузка активного голосования...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ingredients = [];
+
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Показать выбранную вкладку
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Загрузить данные для вкладки
+            if (tabName === 'menu') {
+                loadMenu();
+            } else if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'voting') {
+                loadVoting();
+            }
+        }
+
+        function addIngredient() {
+            const container = document.getElementById('ingredientsList');
+            const ingredientDiv = document.createElement('div');
+            ingredientDiv.className = 'ingredient-item';
+            ingredientDiv.innerHTML = `
+                <input type="text" placeholder="Название ингредиента" class="ingredient-name">
+                <input type="number" placeholder="Граммы" class="ingredient-amount" step="0.1">
+                <input type="number" placeholder="Калории" class="ingredient-calories" step="0.1">
+                <button type="button" class="remove-ingredient" onclick="removeIngredient(this)">×</button>
+            `;
+            container.appendChild(ingredientDiv);
+        }
+
+        function removeIngredient(button) {
+            button.parentElement.remove();
+        }
+
+        document.getElementById('menuForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const ingredients = [];
+            document.querySelectorAll('.ingredient-item').forEach(item => {
+                const name = item.querySelector('.ingredient-name').value;
+                const amount = parseFloat(item.querySelector('.ingredient-amount').value);
+                const calories = parseFloat(item.querySelector('.ingredient-calories').value);
+                
+                if (name && amount && calories) {
+                    ingredients.push({ name, amount, calories });
+                }
+            });
+
+            const menuItem = {
+                name: document.getElementById('dishName').value,
+                description: document.getElementById('dishDescription').value,
+                price: parseFloat(document.getElementById('dishPrice').value),
+                availability: parseInt(document.getElementById('dishAvailability').value),
+                priority_rank: parseInt(document.getElementById('dishPriority').value),
+                cooking_time_minutes: parseInt(document.getElementById('cookingTime').value),
+                ingredients: ingredients,
+                suggested_by: 'MainOwner_Alice' // В реальном приложении это будет ID владельца
+            };
+
+            // Отправка на API
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    AddMenuItem: menuItem
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.MenuItemAdded && data.MenuItemAdded.success) {
+                    showAlert('Позиция успешно добавлена в прейскурант!', 'success');
+                    document.getElementById('menuForm').reset();
+                    document.getElementById('ingredientsList').innerHTML = '';
+                    loadMenu();
+                } else {
+                    showAlert('Ошибка при добавлении позиции: ' + (data.Error ? data.Error.message : 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Ошибка соединения с сервером', 'error');
+            });
+        });
+
+        function loadMenu() {
+            // Загрузка меню через API
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetMenu: {}
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.Menu) {
+                    displayMenu(data.Menu.items);
+                } else {
+                    showAlert('Ошибка загрузки меню', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function displayMenu(items) {
+            const menuList = document.getElementById('menuList');
+            let html = '';
+            
+            items.forEach(item => {
+                const votingButton = !item.is_available_for_voting ? 
+                    `<button class="btn btn-secondary" onclick="makeAvailableForVoting('${item.id}')">Выделить для голосования</button>` :
+                    `<span style="color: green;">✓ На голосовании</span>`;
+                
+                html += `
+                    <div class="card">
+                        <h4>${item.name} - $${item.price.toFixed(2)}</h4>
+                        <p>Доступно: ${item.availability} штук | Приоритет: ${item.priority_rank}/10 | Время готовки: ${item.cooking_time_minutes} мин</p>
+                        <p>Калории: ${item.total_calories} | Ингредиенты: ${item.ingredients.length}</p>
+                        <p>Статус: ${getStatusText(item.status)}</p>
+                        ${votingButton}
+                    </div>
+                `;
+            });
+            
+            menuList.innerHTML = html;
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'Proposed': 'Предложено',
+                'Voting': 'На голосовании',
+                'Approved': 'Одобрено',
+                'Rejected': 'Отклонено',
+                'Active': 'Активно'
+            };
+            return statusMap[status] || status;
+        }
+
+        function loadOrders() {
+            const ordersTable = document.getElementById('ordersTable');
+            ordersTable.innerHTML = `
+                <tr>
+                    <td>ORDER_12345678</td>
+                    <td>Customer_John</td>
+                    <td>$42.97</td>
+                    <td><span class="status pending">На рассмотрении</span></td>
+                    <td>30 минут</td>
+                    <td>
+                        <button class="btn" onclick="confirmOrder('ORDER_12345678')">Подтвердить</button>
+                        <button class="btn btn-secondary" onclick="cancelOrder('ORDER_12345678')">Отменить</button>
+                    </td>
+                </tr>
+                <tr>
+                    <td>ORDER_87654321</td>
+                    <td>Customer_Sarah</td>
+                    <td>$25.50</td>
+                    <td><span class="status confirmed">Подтвержден</span></td>
+                    <td>45 минут</td>
+                    <td>
+                        <span style="color: green;">✓ Токены выданы</span>
+                    </td>
+                </tr>
+            `;
+        }
+
+        function loadVoting() {
+            document.getElementById('votingItems').innerHTML = `
+                <div class="card">
+                    <h4>Vegan Pizza</h4>
+                    <p>Plant-based pizza with vegan cheese</p>
+                    <button class="btn" onclick="makeAvailableForVoting('vegan_pizza')">Сделать доступным для голосования</button>
+                </div>
+            `;
+
+            document.getElementById('activeVoting').innerHTML = `
+                <div class="card">
+                    <h4>Gourmet Burger</h4>
+                    <p>Premium beef burger with special sauce</p>
+                    <p>Голосов ЗА: 150.5 | Голосов ПРОТИВ: 45.2</p>
+                    <p>Статус: Голосование активно</p>
+                </div>
+            `;
+        }
+
+        function makeAvailableForVoting(itemId) {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    MakeItemAvailableForVoting: {
+                        menu_item_id: itemId
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ItemAvailableForVoting && data.ItemAvailableForVoting.success) {
+                    showAlert('Позиция выделена для голосования!', 'success');
+                    loadMenu();
+                } else {
+                    showAlert('Ошибка: ' + (data.Error ? data.Error.message : 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function confirmOrder(orderId) {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ConfirmOrder: {
+                        order_id: orderId
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.OrderConfirmed && data.OrderConfirmed.success) {
+                    showAlert(`Заказ ${orderId} подтвержден! Токены выданы покупателю.`, 'success');
+                    loadOrders();
+                } else {
+                    showAlert('Ошибка подтверждения заказа: ' + (data.Error ? data.Error.message : 'Неизвестная ошибка'), 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Ошибка соединения с API', 'error');
+            });
+        }
+
+        function cancelOrder(orderId) {
+            const reason = prompt('Причина отмены заказа:');
+            if (reason) {
+                fetch('http://localhost:3000', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        CancelOrder: {
+                            order_id: orderId,
+                            reason: reason,
+                            customer_wallet: 'Customer_Wallet' // В реальном приложении это будет из контекста
+                        }
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.OrderCancelled && data.OrderCancelled.success) {
+                        showAlert(`Заказ ${orderId} отменен. Причина: ${reason}`, 'success');
+                        loadOrders();
+                    } else {
+                        showAlert('Ошибка отмены заказа: ' + (data.Error ? data.Error.message : 'Неизвестная ошибка'), 'error');
+                    }
+                })
+                .catch(error => {
+                    showAlert('Ошибка соединения с API', 'error');
+                });
+            }
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            
+            const container = document.querySelector('.tab-content.active');
+            container.insertBefore(alert, container.firstChild);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMenu();
+        });
+    </script>
+</body>
+</html>

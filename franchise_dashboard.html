@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд владельца франшизы</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .stat-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            overflow-x: auto;
+        }
+
+        .tab {
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            background: #f8f9fa;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            min-width: 150px;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #4facfe;
+            color: #4facfe;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #6c757d, #495057);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .table th,
+        .table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status.confirmed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.cancelled {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .alert.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            transition: width 0.3s ease;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .franchise-info {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .franchise-info h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+
+        .franchise-info p {
+            margin-bottom: 10px;
+        }
+
+        .franchise-info strong {
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏪 Дашборд владельца франшизы</h1>
+            <p>Управление франшизной нодой и мониторинг доходов</p>
+        </div>
+
+        <div class="franchise-info">
+            <h3>Информация о франшизе</h3>
+            <p><strong>ID ноды:</strong> <span id="franchiseNodeId">FranchiseNode1</span></p>
+            <p><strong>Владелец:</strong> <span id="franchiseOwner">FranchiseOwner1</span></p>
+            <p><strong>Статус:</strong> <span class="status confirmed">Активна</span></p>
+            <p><strong>Дата создания:</strong> <span id="franchiseCreatedDate">01.01.2024</span></p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Security Tokens</h3>
+                <div class="stat-value" id="franchiseTokens">0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Процент владения</h3>
+                <div class="stat-value" id="franchisePercentage">0.00%</div>
+            </div>
+            <div class="stat-card">
+                <h3>Общий доход</h3>
+                <div class="stat-value" id="totalRevenue">$0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Заказов сегодня</h3>
+                <div class="stat-value" id="todayOrders">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Роялти в фонд</h3>
+                <div class="stat-value" id="royaltyPaid">0.00</div>
+            </div>
+            <div class="stat-card">
+                <h3>Покупатели</h3>
+                <div class="stat-value" id="totalCustomers">0</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('overview')">Обзор</button>
+            <button class="tab" onclick="showTab('orders')">Заказы</button>
+            <button class="tab" onclick="showTab('analytics')">Аналитика</button>
+            <button class="tab" onclick="showTab('settings')">Настройки</button>
+        </div>
+
+        <!-- Обзор -->
+        <div id="overview" class="tab-content active">
+            <h2>Обзор франшизы</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Распределение токенов</h3>
+                    <div id="tokenDistribution">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="franchiseProgress" style="width: 48%"></div>
+                        </div>
+                        <p>Франшиза: <span id="franchiseTokensPercent">48.00%</span></p>
+                        
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="royaltyProgress" style="width: 3%; background: #28a745;"></div>
+                        </div>
+                        <p>Роялти в фонд: <span id="royaltyTokensPercent">3.00%</span></p>
+                        
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="customersProgress" style="width: 49%; background: #17a2b8;"></div>
+                        </div>
+                        <p>Покупатели: <span id="customersTokensPercent">49.00%</span></p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Последние заказы</h3>
+                    <div id="recentOrders">
+                        <p>Загрузка заказов...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Доходы по дням (последние 7 дней)</h3>
+                <div id="revenueChart">
+                    <p>Загрузка графика...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Заказы -->
+        <div id="orders" class="tab-content">
+            <h2>Управление заказами</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Фильтры</h3>
+                    <div class="form-group">
+                        <label>Статус заказа:</label>
+                        <select id="orderStatusFilter">
+                            <option value="">Все</option>
+                            <option value="Pending">На рассмотрении</option>
+                            <option value="Confirmed">Подтвержден</option>
+                            <option value="Cancelled">Отменен</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата от:</label>
+                        <input type="date" id="dateFrom">
+                    </div>
+                    <div class="form-group">
+                        <label>Дата до:</label>
+                        <input type="date" id="dateTo">
+                    </div>
+                    <button class="btn" onclick="filterOrders()">Применить фильтры</button>
+                </div>
+
+                <div class="card">
+                    <h3>Статистика заказов</h3>
+                    <div id="orderStats">
+                        <p>Загрузка статистики...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Список заказов</h3>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID заказа</th>
+                            <th>Клиент</th>
+                            <th>Сумма</th>
+                            <th>Токены франшизы</th>
+                            <th>Роялти</th>
+                            <th>Статус</th>
+                            <th>Дата</th>
+                            <th>Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTable">
+                        <tr>
+                            <td colspan="8">Загрузка заказов...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Аналитика -->
+        <div id="analytics" class="tab-content">
+            <h2>Аналитика франшизы</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Популярные блюда</h3>
+                    <div id="popularItems">
+                        <p>Загрузка данных...</p>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Время заказов</h3>
+                    <div id="orderTimes">
+                        <p>Загрузка данных...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Динамика доходов</h3>
+                <div id="revenueTrend">
+                    <p>Загрузка графика...</p>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3>Распределение токенов</h3>
+                <div id="tokenDistributionChart">
+                    <p>Загрузка графика...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Настройки -->
+        <div id="settings" class="tab-content">
+            <h2>Настройки франшизы</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Информация о франшизе</h3>
+                    <div class="form-group">
+                        <label>Название франшизы:</label>
+                        <input type="text" id="franchiseName" value="Франшиза #1">
+                    </div>
+                    <div class="form-group">
+                        <label>Описание:</label>
+                        <textarea id="franchiseDescription" rows="3">Франшизная нода сети фудтраков</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Контактная информация:</label>
+                        <input type="text" id="contactInfo" placeholder="Телефон, email">
+                    </div>
+                    <button class="btn" onclick="updateFranchiseInfo()">Сохранить изменения</button>
+                </div>
+
+                <div class="card">
+                    <h3>Уведомления</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifyNewOrders" checked>
+                            Уведомления о новых заказах
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifyPayments" checked>
+                            Уведомления о платежах
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="notifyAlerts" checked>
+                            Уведомления о алертах
+                        </label>
+                    </div>
+                    <button class="btn" onclick="updateNotifications()">Сохранить настройки</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Экспорт данных</h3>
+                <p>Вы можете экспортировать данные о заказах и доходах для анализа.</p>
+                <button class="btn" onclick="exportOrders()">Экспорт заказов</button>
+                <button class="btn btn-secondary" onclick="exportRevenue()">Экспорт доходов</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let franchiseNodeId = 'FranchiseNode1';
+        let franchiseOwner = 'FranchiseOwner1';
+
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Показать выбранную вкладку
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+
+            // Загрузить данные для вкладки
+            if (tabName === 'overview') {
+                loadOverviewData();
+            } else if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'analytics') {
+                loadAnalytics();
+            }
+        }
+
+        function loadOverviewData() {
+            // Загрузка данных франшизы
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetFranchiseStats: {
+                        franchise_node_id: franchiseNodeId
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.FranchiseStats) {
+                    updateFranchiseStats(data.FranchiseStats);
+                }
+            })
+            .catch(error => {
+                console.log('API недоступен, используются демо-данные');
+                loadDemoData();
+            });
+
+            loadRecentOrders();
+            loadRevenueChart();
+        }
+
+        function loadDemoData() {
+            document.getElementById('franchiseTokens').textContent = '1,200.00';
+            document.getElementById('franchisePercentage').textContent = '24.00%';
+            document.getElementById('totalRevenue').textContent = '$2,400.00';
+            document.getElementById('todayOrders').textContent = '12';
+            document.getElementById('royaltyPaid').textContent = '75.00';
+            document.getElementById('totalCustomers').textContent = '45';
+        }
+
+        function loadRecentOrders() {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetFranchiseOrders: {
+                        franchise_node_id: franchiseNodeId,
+                        limit: 5
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.FranchiseOrders) {
+                    displayRecentOrders(data.FranchiseOrders.orders);
+                }
+            })
+            .catch(error => {
+                // Демо-данные
+                displayRecentOrders([
+                    {
+                        order_id: 'ORDER_123',
+                        customer: 'Customer_John',
+                        amount: 25.50,
+                        franchise_tokens: 12.24,
+                        royalty: 0.77,
+                        status: 'Confirmed',
+                        timestamp: Date.now() - 3600000
+                    },
+                    {
+                        order_id: 'ORDER_124',
+                        customer: 'Customer_Sarah',
+                        amount: 18.99,
+                        franchise_tokens: 9.12,
+                        royalty: 0.57,
+                        status: 'Pending',
+                        timestamp: Date.now() - 7200000
+                    }
+                ]);
+            });
+        }
+
+        function displayRecentOrders(orders) {
+            const ordersDiv = document.getElementById('recentOrders');
+            let html = '';
+
+            orders.forEach(order => {
+                const timeAgo = new Date(order.timestamp).toLocaleString();
+                html += `
+                    <div class="alert info">
+                        <strong>${order.order_id}</strong><br>
+                        Клиент: ${order.customer}<br>
+                        Сумма: $${order.amount.toFixed(2)}<br>
+                        Токены: ${order.franchise_tokens.toFixed(2)}<br>
+                        Роялти: ${order.royalty.toFixed(2)}<br>
+                        <span class="status ${order.status.toLowerCase()}">${order.status}</span><br>
+                        <small>${timeAgo}</small>
+                    </div>
+                `;
+            });
+
+            ordersDiv.innerHTML = html || '<p>Нет заказов</p>';
+        }
+
+        function loadRevenueChart() {
+            // Демо-данные для графика доходов
+            const revenueData = [120, 150, 180, 200, 175, 220, 250];
+            const days = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+            
+            let html = '<div style="display: flex; align-items: end; height: 200px; gap: 10px;">';
+            
+            revenueData.forEach((value, index) => {
+                const height = (value / Math.max(...revenueData)) * 100;
+                html += `
+                    <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                        <div style="background: linear-gradient(135deg, #4facfe, #00f2fe); width: 100%; height: ${height}%; border-radius: 5px 5px 0 0; margin-bottom: 10px;"></div>
+                        <span style="font-size: 12px;">${days[index]}</span>
+                        <span style="font-size: 10px; color: #666;">$${value}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            document.getElementById('revenueChart').innerHTML = html;
+        }
+
+        function loadOrders() {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetFranchiseOrders: {
+                        franchise_node_id: franchiseNodeId,
+                        limit: 100
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.FranchiseOrders) {
+                    displayOrders(data.FranchiseOrders.orders);
+                    updateOrderStats(data.FranchiseOrders.orders);
+                }
+            })
+            .catch(error => {
+                // Демо-данные
+                const demoOrders = [
+                    {
+                        order_id: 'ORDER_123',
+                        customer: 'Customer_John',
+                        amount: 25.50,
+                        franchise_tokens: 12.24,
+                        royalty: 0.77,
+                        status: 'Confirmed',
+                        timestamp: Date.now() - 3600000
+                    },
+                    {
+                        order_id: 'ORDER_124',
+                        customer: 'Customer_Sarah',
+                        amount: 18.99,
+                        franchise_tokens: 9.12,
+                        royalty: 0.57,
+                        status: 'Pending',
+                        timestamp: Date.now() - 7200000
+                    }
+                ];
+                displayOrders(demoOrders);
+                updateOrderStats(demoOrders);
+            });
+        }
+
+        function displayOrders(orders) {
+            const ordersTable = document.getElementById('ordersTable');
+            let html = '';
+
+            orders.forEach(order => {
+                const timeAgo = new Date(order.timestamp).toLocaleString();
+                html += `
+                    <tr>
+                        <td>${order.order_id}</td>
+                        <td>${order.customer}</td>
+                        <td>$${order.amount.toFixed(2)}</td>
+                        <td>${order.franchise_tokens.toFixed(2)}</td>
+                        <td>${order.royalty.toFixed(2)}</td>
+                        <td><span class="status ${order.status.toLowerCase()}">${order.status}</span></td>
+                        <td>${timeAgo}</td>
+                        <td>
+                            ${order.status === 'Pending' ? 
+                                `<button class="btn" onclick="confirmOrder('${order.order_id}')">Подтвердить</button>` : 
+                                '<span style="color: green;">✓ Обработан</span>'
+                            }
+                        </td>
+                    </tr>
+                `;
+            });
+
+            ordersTable.innerHTML = html || '<tr><td colspan="8">Нет заказов</td></tr>';
+        }
+
+        function updateOrderStats(orders) {
+            const totalOrders = orders.length;
+            const confirmedOrders = orders.filter(o => o.status === 'Confirmed').length;
+            const totalRevenue = orders.reduce((sum, o) => sum + o.amount, 0);
+            const totalTokens = orders.reduce((sum, o) => sum + o.franchise_tokens, 0);
+
+            const statsDiv = document.getElementById('orderStats');
+            statsDiv.innerHTML = `
+                <p><strong>Всего заказов:</strong> ${totalOrders}</p>
+                <p><strong>Подтверждено:</strong> ${confirmedOrders}</p>
+                <p><strong>Общий доход:</strong> $${totalRevenue.toFixed(2)}</p>
+                <p><strong>Заработано токенов:</strong> ${totalTokens.toFixed(2)}</p>
+            `;
+        }
+
+        function loadAnalytics() {
+            loadPopularItems();
+            loadOrderTimes();
+            loadRevenueTrend();
+            loadTokenDistributionChart();
+        }
+
+        function loadPopularItems() {
+            // Демо-данные для популярных блюд
+            const popularItems = [
+                { name: 'Classic Burger', orders: 45, revenue: 584.55 },
+                { name: 'Pepperoni Pizza', orders: 32, revenue: 543.68 },
+                { name: 'Caesar Salad', orders: 28, revenue: 252.00 },
+                { name: 'Chicken Wings', orders: 25, revenue: 375.00 }
+            ];
+
+            const itemsDiv = document.getElementById('popularItems');
+            let html = '';
+
+            popularItems.forEach(item => {
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-radius: 5px; margin-bottom: 10px;">
+                        <div>
+                            <strong>${item.name}</strong><br>
+                            <small>${item.orders} заказов</small>
+                        </div>
+                        <div style="text-align: right;">
+                            <strong>$${item.revenue.toFixed(2)}</strong>
+                        </div>
+                    </div>
+                `;
+            });
+
+            itemsDiv.innerHTML = html;
+        }
+
+        function loadOrderTimes() {
+            // Демо-данные для времени заказов
+            const orderTimes = [
+                { hour: '12:00', orders: 15 },
+                { hour: '13:00', orders: 25 },
+                { hour: '14:00', orders: 18 },
+                { hour: '15:00', orders: 12 },
+                { hour: '16:00', orders: 8 },
+                { hour: '17:00', orders: 22 },
+                { hour: '18:00', orders: 30 },
+                { hour: '19:00', orders: 28 }
+            ];
+
+            const timesDiv = document.getElementById('orderTimes');
+            let html = '';
+
+            orderTimes.forEach(time => {
+                const maxOrders = Math.max(...orderTimes.map(t => t.orders));
+                const width = (time.orders / maxOrders) * 100;
+                
+                html += `
+                    <div style="margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                            <span>${time.hour}</span>
+                            <span>${time.orders} заказов</span>
+                        </div>
+                        <div style="background: #e9ecef; height: 20px; border-radius: 10px; overflow: hidden;">
+                            <div style="background: linear-gradient(135deg, #4facfe, #00f2fe); height: 100%; width: ${width}%;"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            timesDiv.innerHTML = html;
+        }
+
+        function loadRevenueTrend() {
+            // Демо-данные для тренда доходов
+            const revenueData = [1200, 1350, 1180, 1420, 1580, 1650, 1720, 1890, 1750, 1920, 2100, 2250];
+            const months = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'];
+            
+            let html = '<div style="display: flex; align-items: end; height: 200px; gap: 5px;">';
+            
+            revenueData.forEach((value, index) => {
+                const height = (value / Math.max(...revenueData)) * 100;
+                html += `
+                    <div style="display: flex; flex-direction: column; align-items: center; flex: 1;">
+                        <div style="background: linear-gradient(135deg, #4facfe, #00f2fe); width: 100%; height: ${height}%; border-radius: 3px 3px 0 0; margin-bottom: 5px;"></div>
+                        <span style="font-size: 10px; color: #666;">${months[index]}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            document.getElementById('revenueTrend').innerHTML = html;
+        }
+
+        function loadTokenDistributionChart() {
+            // Демо-данные для распределения токенов
+            const tokenData = [
+                { label: 'Франшиза', value: 48, color: '#4facfe' },
+                { label: 'Роялти', value: 3, color: '#28a745' },
+                { label: 'Покупатели', value: 49, color: '#17a2b8' }
+            ];
+
+            let html = '<div style="display: flex; justify-content: center; align-items: center; height: 200px;">';
+            
+            tokenData.forEach(item => {
+                html += `
+                    <div style="display: flex; flex-direction: column; align-items: center; margin: 0 20px;">
+                        <div style="width: 60px; height: 60px; border-radius: 50%; background: ${item.color}; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; margin-bottom: 10px;">
+                            ${item.value}%
+                        </div>
+                        <span style="font-size: 12px; text-align: center;">${item.label}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            document.getElementById('tokenDistributionChart').innerHTML = html;
+        }
+
+        function filterOrders() {
+            const status = document.getElementById('orderStatusFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            
+            // Здесь можно добавить логику фильтрации
+            loadOrders();
+        }
+
+        function confirmOrder(orderId) {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ConfirmOrder: {
+                        order_id: orderId
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.OrderConfirmed && data.OrderConfirmed.success) {
+                    showAlert(`Заказ ${orderId} подтвержден!`, 'success');
+                    loadOrders();
+                } else {
+                    showAlert('Ошибка подтверждения заказа', 'error');
+                }
+            })
+            .catch(error => {
+                showAlert('Ошибка соединения с сервером', 'error');
+            });
+        }
+
+        function updateFranchiseInfo() {
+            const name = document.getElementById('franchiseName').value;
+            const description = document.getElementById('franchiseDescription').value;
+            const contact = document.getElementById('contactInfo').value;
+            
+            showAlert('Информация о франшизе обновлена!', 'success');
+        }
+
+        function updateNotifications() {
+            const newOrders = document.getElementById('notifyNewOrders').checked;
+            const payments = document.getElementById('notifyPayments').checked;
+            const alerts = document.getElementById('notifyAlerts').checked;
+            
+            showAlert('Настройки уведомлений сохранены!', 'success');
+        }
+
+        function exportOrders() {
+            showAlert('Экспорт заказов начат. Файл будет загружен через несколько секунд.', 'success');
+        }
+
+        function exportRevenue() {
+            showAlert('Экспорт данных о доходах начат. Файл будет загружен через несколько секунд.', 'success');
+        }
+
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            
+            const container = document.querySelector('.tab-content.active');
+            container.insertBefore(alert, container.firstChild);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverviewData();
+        });
+    </script>
+</body>
+</html>

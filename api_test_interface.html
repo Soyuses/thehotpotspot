@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тестирование API видеонаблюдения</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            border-left: 5px solid #667eea;
+        }
+
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8, #6a4190);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: linear-gradient(135deg, #218838, #1ea085);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: linear-gradient(135deg, #c82333, #d63031);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .response-area {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-success {
+            background: #28a745;
+        }
+
+        .status-error {
+            background: #dc3545;
+        }
+
+        .status-pending {
+            background: #ffc107;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid transparent;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+
+        .alert-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border-color: #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧪 Тестирование API</h1>
+            <p>Система видеонаблюдения The Hot Pot Spot</p>
+        </div>
+
+        <div class="content">
+            <div class="alert alert-info">
+                <strong>📋 Инструкция:</strong> Нажмите на кнопки ниже для тестирования различных API эндпоинтов. 
+                Ответы будут отображаться в соответствующих областях.
+            </div>
+
+            <div class="grid">
+                <!-- Тестирование согласий -->
+                <div class="test-section">
+                    <h3>📋 Управление согласиями</h3>
+                    <div class="test-buttons">
+                        <button class="btn btn-primary" onclick="testRequestConsent()">Запрос согласия</button>
+                        <button class="btn btn-success" onclick="testConfirmConsent()">Подтвердить согласие</button>
+                    </div>
+                    <div class="response-area" id="consentResponse">Нажмите кнопку для тестирования...</div>
+                </div>
+
+                <!-- Тестирование записей -->
+                <div class="test-section">
+                    <h3>🎥 Управление записями</h3>
+                    <div class="test-buttons">
+                        <button class="btn btn-success" onclick="testStartRecording()">Начать запись</button>
+                        <button class="btn btn-danger" onclick="testStopRecording()">Остановить запись</button>
+                        <button class="btn btn-primary" onclick="testGetActiveRecordings()">Активные записи</button>
+                    </div>
+                    <div class="response-area" id="recordingResponse">Нажмите кнопку для тестирования...</div>
+                </div>
+
+                <!-- Тестирование камер -->
+                <div class="test-section">
+                    <h3>📹 Управление камерами</h3>
+                    <div class="test-buttons">
+                        <button class="btn btn-primary" onclick="testGetCameraStats()">Статистика камер</button>
+                        <button class="btn btn-success" onclick="testAddCamera()">Добавить камеру</button>
+                    </div>
+                    <div class="response-area" id="cameraResponse">Нажмите кнопку для тестирования...</div>
+                </div>
+
+                <!-- Тестирование веб-интерфейсов -->
+                <div class="test-section">
+                    <h3>🌐 Веб-интерфейсы</h3>
+                    <div class="test-buttons">
+                        <button class="btn btn-primary" onclick="openVideoDashboard()">Панель управления</button>
+                        <button class="btn btn-success" onclick="openConsentInterface()">Интерфейс согласия</button>
+                        <button class="btn btn-primary" onclick="testAllInterfaces()">Проверить все</button>
+                    </div>
+                    <div class="response-area" id="interfaceResponse">Нажмите кнопку для тестирования...</div>
+                </div>
+            </div>
+
+            <!-- Общий статус -->
+            <div class="test-section">
+                <h3>📊 Общий статус системы</h3>
+                <div class="test-buttons">
+                    <button class="btn btn-primary" onclick="testAllApis()">Тестировать все API</button>
+                    <button class="btn btn-success" onclick="checkServerStatus()">Проверить сервер</button>
+                </div>
+                <div class="response-area" id="statusResponse">Нажмите кнопку для проверки статуса...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8080';
+
+        // Функция для отправки API запросов
+        async function apiRequest(method, endpoint, data = null) {
+            try {
+                const options = {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const result = await response.json();
+                
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: result
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Функция для отображения ответа
+        function displayResponse(elementId, response) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleString();
+            
+            if (response.success) {
+                element.innerHTML = `✅ [${timestamp}] Успешно\n${JSON.stringify(response.data, null, 2)}`;
+                element.style.borderLeft = '5px solid #28a745';
+            } else {
+                element.innerHTML = `❌ [${timestamp}] Ошибка: ${response.error || response.data?.message || 'Неизвестная ошибка'}\n${JSON.stringify(response.data, null, 2)}`;
+                element.style.borderLeft = '5px solid #dc3545';
+            }
+        }
+
+        // Тестирование согласий
+        async function testRequestConsent() {
+            const response = await apiRequest('POST', '/api/video-consent', {
+                customer_id: 'CUSTOMER_001',
+                table_id: 'TABLE_001',
+                language: 'ru'
+            });
+            displayResponse('consentResponse', response);
+        }
+
+        async function testConfirmConsent() {
+            const response = await apiRequest('POST', '/api/video-consent/confirm', {
+                customer_id: 'CUSTOMER_001',
+                anonymization_preference: 'replace'
+            });
+            displayResponse('consentResponse', response);
+        }
+
+        // Тестирование записей
+        async function testStartRecording() {
+            const response = await apiRequest('POST', '/api/video-recording/start', {
+                camera_id: 'CAM_TABLE_001',
+                customer_id: 'CUSTOMER_001',
+                table_id: 'TABLE_001'
+            });
+            displayResponse('recordingResponse', response);
+        }
+
+        async function testStopRecording() {
+            const response = await apiRequest('POST', '/api/video-recording/stop', {
+                recording_id: 'REC_12345678'
+            });
+            displayResponse('recordingResponse', response);
+        }
+
+        async function testGetActiveRecordings() {
+            const response = await apiRequest('GET', '/api/video-recording/active');
+            displayResponse('recordingResponse', response);
+        }
+
+        // Тестирование камер
+        async function testGetCameraStats() {
+            const response = await apiRequest('GET', '/api/video-cameras/stats');
+            displayResponse('cameraResponse', response);
+        }
+
+        async function testAddCamera() {
+            const response = await apiRequest('POST', '/api/video-cameras', {
+                camera_id: 'CAM_TEST_001',
+                camera_type: 'customer_table',
+                location: 'Test Table',
+                ip_address: '192.168.1.200',
+                port: 8080,
+                resolution: [1920, 1080],
+                fps: 30,
+                anonymization_zone: 'replace',
+                requires_consent: true,
+                stream_to_twitch: true,
+                stream_to_youtube: false
+            });
+            displayResponse('cameraResponse', response);
+        }
+
+        // Тестирование веб-интерфейсов
+        function openVideoDashboard() {
+            window.open(`${API_BASE}/video_management_dashboard.html`, '_blank');
+        }
+
+        function openConsentInterface() {
+            window.open(`${API_BASE}/video_consent_interface.html?customer_id=CUSTOMER_001&table_id=TABLE_001`, '_blank');
+        }
+
+        async function testAllInterfaces() {
+            const interfaces = [
+                { name: 'Главная страница', url: '/' },
+                { name: 'Панель управления видео', url: '/video_management_dashboard.html' },
+                { name: 'Интерфейс согласия', url: '/video_consent_interface.html' },
+                { name: 'Дашборд владельца', url: '/owner_dashboard.html' },
+                { name: 'Кошелек клиента', url: '/customer_wallet.html' }
+            ];
+
+            let results = [];
+            
+            for (const interface of interfaces) {
+                try {
+                    const response = await fetch(`${API_BASE}${interface.url}`, { method: 'HEAD' });
+                    results.push(`✅ ${interface.name}: ${response.status === 200 ? 'Доступен' : `Статус ${response.status}`}`);
+                } catch (error) {
+                    results.push(`❌ ${interface.name}: Недоступен - ${error.message}`);
+                }
+            }
+
+            document.getElementById('interfaceResponse').innerHTML = results.join('\n');
+        }
+
+        // Общие тесты
+        async function testAllApis() {
+            const tests = [
+                { name: 'Запрос согласия', fn: () => apiRequest('POST', '/api/video-consent', { customer_id: 'TEST', table_id: 'TEST', language: 'ru' }) },
+                { name: 'Подтверждение согласия', fn: () => apiRequest('POST', '/api/video-consent/confirm', { customer_id: 'TEST', anonymization_preference: 'replace' }) },
+                { name: 'Начало записи', fn: () => apiRequest('POST', '/api/video-recording/start', { camera_id: 'CAM_TEST' }) },
+                { name: 'Активные записи', fn: () => apiRequest('GET', '/api/video-recording/active') },
+                { name: 'Статистика камер', fn: () => apiRequest('GET', '/api/video-cameras/stats') }
+            ];
+
+            let results = [];
+            
+            for (const test of tests) {
+                try {
+                    const response = await test.fn();
+                    results.push(`${response.success ? '✅' : '❌'} ${test.name}: ${response.success ? 'OK' : 'FAIL'}`);
+                } catch (error) {
+                    results.push(`❌ ${test.name}: ERROR - ${error.message}`);
+                }
+            }
+
+            document.getElementById('statusResponse').innerHTML = results.join('\n');
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/`, { method: 'HEAD' });
+                if (response.ok) {
+                    document.getElementById('statusResponse').innerHTML = `✅ Сервер работает\nСтатус: ${response.status}\nВремя: ${new Date().toLocaleString()}`;
+                } else {
+                    document.getElementById('statusResponse').innerHTML = `⚠️ Сервер отвечает, но с ошибкой\nСтатус: ${response.status}`;
+                }
+            } catch (error) {
+                document.getElementById('statusResponse').innerHTML = `❌ Сервер недоступен\nОшибка: ${error.message}\n\nУбедитесь, что сервер запущен:\ncargo run`;
+            }
+        }
+
+        // Автоматическая проверка статуса при загрузке
+        window.addEventListener('load', function() {
+            checkServerStatus();
+        });
+    </script>
+</body>
+</html>

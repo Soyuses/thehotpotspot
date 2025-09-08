@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hot Pot Spot - Согласие на видеозапись</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .consent-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .consent-text {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 25px 0;
+            text-align: left;
+            border-left: 5px solid #667eea;
+        }
+
+        .consent-text h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .consent-text p {
+            line-height: 1.6;
+            color: #555;
+            margin-bottom: 15px;
+        }
+
+        .language-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .language-tab {
+            flex: 1;
+            padding: 15px;
+            background: #e9ecef;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .language-tab.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .language-tab:hover {
+            background: #5a6fd8;
+            color: white;
+        }
+
+        .language-content {
+            display: none;
+        }
+
+        .language-content.active {
+            display: block;
+        }
+
+        .anonymization-options {
+            margin: 25px 0;
+        }
+
+        .anonymization-options h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .option-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+        }
+
+        .option-item:hover {
+            background: #e9ecef;
+        }
+
+        .option-item.selected {
+            background: #e3f2fd;
+            border-color: #667eea;
+        }
+
+        .option-item input[type="radio"] {
+            margin-right: 15px;
+            transform: scale(1.2);
+        }
+
+        .option-item label {
+            cursor: pointer;
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .option-description {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .duration-info {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            color: #856404;
+        }
+
+        .duration-info h5 {
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+
+        .consent-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn-accept {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+        }
+
+        .btn-accept:hover {
+            background: linear-gradient(135deg, #218838, #1ea085);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .btn-decline {
+            background: linear-gradient(135deg, #dc3545, #e74c3c);
+            color: white;
+        }
+
+        .btn-decline:hover {
+            background: linear-gradient(135deg, #c82333, #d63031);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .legal-notice {
+            margin-top: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-size: 0.9em;
+            color: #666;
+            border-left: 4px solid #6c757d;
+        }
+
+        .legal-notice h6 {
+            color: #495057;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            z-index: 1000;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status-accepted {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-declined {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .consent-container {
+                padding: 25px;
+                margin: 10px;
+            }
+
+            .consent-buttons {
+                flex-direction: column;
+            }
+
+            .language-tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="status-indicator status-pending" id="statusIndicator">
+        Ожидание решения
+    </div>
+
+    <div class="consent-container">
+        <div class="logo">🍲 The Hot Pot Spot</div>
+        <div class="subtitle">Согласие на видеозапись</div>
+
+        <div class="language-tabs">
+            <button class="language-tab active" onclick="switchLanguage('ru')">Русский</button>
+            <button class="language-tab" onclick="switchLanguage('ka')">ქართული</button>
+            <button class="language-tab" onclick="switchLanguage('en')">English</button>
+        </div>
+
+        <div class="language-content active" id="content-ru">
+            <div class="consent-text">
+                <h3>📹 Согласие на видеозапись</h3>
+                <p>Мы ведем видеонаблюдение в нашем заведении для обеспечения безопасности и улучшения качества обслуживания.</p>
+                <p><strong>Ваше согласие необходимо для:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Видеозаписи вашего пребывания за столом</li>
+                    <li>Возможной трансляции на Twitch и YouTube</li>
+                    <li>Использования видео в маркетинговых целях</li>
+                </ul>
+                <p><strong>Ваши права:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Вы можете выбрать уровень анонимизации</li>
+                    <li>Запись ограничена 30 минутами</li>
+                    <li>Вы можете отозвать согласие в любой момент</li>
+                    <li>Ваши данные защищены согласно грузинскому законодательству</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="language-content" id="content-ka">
+            <div class="consent-text">
+                <h3>📹 ვიდეო ჩაწერის თანხმობა</h3>
+                <p>ჩვენ ვატარებთ ვიდეო მონიტორინგს ჩვენს დაწესებულებაში უსაფრთხოების უზრუნველსაყოფად და მომსახურების ხარისხის გასაუმჯობესებლად.</p>
+                <p><strong>თქვენი თანხმობა საჭიროა:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>თქვენი ვიზიტის ვიდეო ჩაწერისთვის მაგიდაზე</li>
+                    <li>შესაძლო ტრანსლაციისთვის Twitch-ზე და YouTube-ზე</li>
+                    <li>ვიდეოს გამოყენებისთვის მარკეტინგული მიზნებისთვის</li>
+                </ul>
+                <p><strong>თქვენი უფლებები:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>შეგიძლიათ აირჩიოთ ანონიმიზაციის დონე</li>
+                    <li>ჩაწერა შეზღუდულია 30 წუთით</li>
+                    <li>შეგიძლიათ ნებისმიერ დროს გააუქმოთ თანხმობა</li>
+                    <li>თქვენი მონაცემები დაცულია ქართული კანონმდებლობის შესაბამისად</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="language-content" id="content-en">
+            <div class="consent-text">
+                <h3>📹 Video Recording Consent</h3>
+                <p>We conduct video surveillance in our establishment to ensure security and improve service quality.</p>
+                <p><strong>Your consent is required for:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>Recording your visit at the table</li>
+                    <li>Possible streaming on Twitch and YouTube</li>
+                    <li>Using video for marketing purposes</li>
+                </ul>
+                <p><strong>Your rights:</strong></p>
+                <ul style="margin-left: 20px; margin-top: 10px;">
+                    <li>You can choose the level of anonymization</li>
+                    <li>Recording is limited to 30 minutes</li>
+                    <li>You can withdraw consent at any time</li>
+                    <li>Your data is protected according to Georgian legislation</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="anonymization-options">
+            <h4>🔒 Выберите уровень анонимизации:</h4>
+            <div class="option-group">
+                <div class="option-item" onclick="selectOption('blur')">
+                    <input type="radio" name="anonymization" value="blur" id="blur">
+                    <label for="blur">
+                        <strong>Полное размытие лиц</strong>
+                        <div class="option-description">Лица будут полностью размыты для защиты приватности</div>
+                    </label>
+                </div>
+                <div class="option-item" onclick="selectOption('replace')">
+                    <input type="radio" name="anonymization" value="replace" id="replace" checked>
+                    <label for="replace">
+                        <strong>Замена лиц на аватар</strong>
+                        <div class="option-description">Лица будут заменены на выбранный аватар или маску</div>
+                    </label>
+                </div>
+                <div class="option-item" onclick="selectOption('none')">
+                    <input type="radio" name="anonymization" value="none" id="none">
+                    <label for="none">
+                        <strong>Без анонимизации</strong>
+                        <div class="option-description">Лица будут видны (только с вашего согласия)</div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <div class="duration-info">
+            <h5>⏱️ Ограничения по времени</h5>
+            <p>Максимальная продолжительность записи: <strong>30 минут</strong></p>
+            <p>Запись автоматически остановится по истечении времени</p>
+        </div>
+
+        <div class="consent-buttons">
+            <button class="btn btn-decline" onclick="declineConsent()">
+                ❌ Отклонить
+            </button>
+            <button class="btn btn-accept" onclick="acceptConsent()">
+                ✅ Согласиться
+            </button>
+        </div>
+
+        <div class="legal-notice">
+            <h6>⚖️ Правовая информация</h6>
+            <p>Данное согласие регулируется Законом Грузии "О защите персональных данных" от 14 июня 2023 года. 
+            Вы имеете право на доступ, исправление и удаление ваших персональных данных.</p>
+        </div>
+    </div>
+
+    <script>
+        let currentLanguage = 'ru';
+        let selectedAnonymization = 'replace';
+        let consentGiven = false;
+
+        function switchLanguage(lang) {
+            // Убираем активный класс со всех вкладок и контента
+            document.querySelectorAll('.language-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.language-content').forEach(content => content.classList.remove('active'));
+            
+            // Добавляем активный класс к выбранной вкладке и контенту
+            event.target.classList.add('active');
+            document.getElementById(`content-${lang}`).classList.add('active');
+            
+            currentLanguage = lang;
+        }
+
+        function selectOption(option) {
+            // Убираем выделение со всех опций
+            document.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
+            
+            // Добавляем выделение к выбранной опции
+            event.currentTarget.classList.add('selected');
+            
+            // Устанавливаем радио-кнопку
+            document.getElementById(option).checked = true;
+            selectedAnonymization = option;
+        }
+
+        function acceptConsent() {
+            if (consentGiven) return;
+            
+            consentGiven = true;
+            
+            // Обновляем статус
+            const statusIndicator = document.getElementById('statusIndicator');
+            statusIndicator.className = 'status-indicator status-accepted';
+            statusIndicator.textContent = 'Согласие дано';
+            
+            // Отключаем кнопки
+            document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+            
+            // Отправляем данные на сервер
+            sendConsentToServer(true);
+            
+            // Показываем уведомление
+            showNotification('Спасибо! Ваше согласие принято. Запись началась.', 'success');
+        }
+
+        function declineConsent() {
+            if (consentGiven) return;
+            
+            consentGiven = true;
+            
+            // Обновляем статус
+            const statusIndicator = document.getElementById('statusIndicator');
+            statusIndicator.className = 'status-indicator status-declined';
+            statusIndicator.textContent = 'Согласие отклонено';
+            
+            // Отключаем кнопки
+            document.querySelectorAll('.btn').forEach(btn => btn.disabled = true);
+            
+            // Отправляем данные на сервер
+            sendConsentToServer(false);
+            
+            // Показываем уведомление
+            showNotification('Ваше решение принято. Запись не будет вестись.', 'info');
+        }
+
+        async function sendConsentToServer(accepted) {
+            try {
+                const response = await fetch('/api/video-consent', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        customer_id: getCustomerId(),
+                        table_id: getTableId(),
+                        consent_given: accepted,
+                        anonymization_preference: selectedAnonymization,
+                        language: currentLanguage,
+                        timestamp: new Date().toISOString(),
+                        ip_address: await getClientIP(),
+                        user_agent: navigator.userAgent
+                    })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log('Consent sent successfully:', result);
+                } else {
+                    console.error('Failed to send consent:', response.statusText);
+                }
+            } catch (error) {
+                console.error('Error sending consent:', error);
+            }
+        }
+
+        function getCustomerId() {
+            // Получаем ID клиента из URL параметров или localStorage
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('customer_id') || localStorage.getItem('customer_id') || 'anonymous';
+        }
+
+        function getTableId() {
+            // Получаем ID стола из URL параметров
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('table_id') || 'unknown';
+        }
+
+        async function getClientIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (error) {
+                return 'unknown';
+            }
+        }
+
+        function showNotification(message, type) {
+            // Создаем уведомление
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: ${type === 'success' ? '#28a745' : '#17a2b8'};
+                color: white;
+                padding: 15px 25px;
+                border-radius: 10px;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                z-index: 10000;
+                font-weight: 600;
+                animation: slideDown 0.3s ease;
+            `;
+            notification.textContent = message;
+            
+            // Добавляем стили для анимации
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideDown {
+                    from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+                    to { transform: translateX(-50%) translateY(0); opacity: 1; }
+                }
+            `;
+            document.head.appendChild(style);
+            
+            document.body.appendChild(notification);
+            
+            // Удаляем уведомление через 5 секунд
+            setTimeout(() => {
+                notification.remove();
+                style.remove();
+            }, 5000);
+        }
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            // Выбираем опцию по умолчанию
+            document.querySelector('.option-item:nth-child(2)').classList.add('selected');
+            
+            // Получаем параметры из URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const customerId = urlParams.get('customer_id');
+            const tableId = urlParams.get('table_id');
+            
+            if (customerId) {
+                localStorage.setItem('customer_id', customerId);
+            }
+            
+            if (tableId) {
+                document.title = `The Hot Pot Spot - Согласие на видеозапись (Стол ${tableId})`;
+            }
+        });
+    </script>
+</body>
+</html>
