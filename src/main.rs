@@ -13,14 +13,14 @@ use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 use std::thread;
 
-// Импорты для модулей - временно закомментированы для исправления тестов
-// use crate::simple_server::SimpleServer;
-// use crate::web_server::WebServer;
-// use crate::franchise_network::{FranchiseNetwork, NodeType, SaleItem};
-// use crate::pos_api::PosApiServer;
-// use crate::consensus::{ConsensusAlgorithm, Block as ConsensusBlock, Transaction as ConsensusTransaction, TransactionType};
-// use crate::p2p_network::P2PNode;
-// use crate::ipfs_storage::IPFSStorage;
+// Импорты для модулей блокчейна
+use blockchain_project::simple_server::SimpleServer;
+use blockchain_project::web_server::WebServer;
+use blockchain_project::franchise_network::{FranchiseNetwork, NodeType, SaleItem};
+use blockchain_project::pos_api::PosApiServer;
+use blockchain_project::consensus::{ConsensusAlgorithm, Block as ConsensusBlock, Transaction as ConsensusTransaction, TransactionType};
+use blockchain_project::p2p_network::P2PNode;
+use blockchain_project::ipfs_storage::IPFSStorage;
 
 // Импорты для системы видеонаблюдения
 use blockchain_project::video_surveillance::{
@@ -3176,8 +3176,8 @@ impl UI {
                 14 => {
                     println!("🌐 Starting API Server...");
                     let blockchain_arc = Arc::new(Mutex::new(self.blockchain.clone()));
-                    // let api_server = SimpleServer::new(blockchain_arc, 3000);
-                    // api_server.start();
+                    let api_server = SimpleServer::new(3000);
+                    // api_server.start(); // Запуск в отдельном потоке
                 },
                 0 => {
                     println!("👋 Goodbye!");
@@ -3393,14 +3393,14 @@ async fn main() {
         println!("🏪 Starting Franchise Network API on port 3001...");
         
         // Создаем франшизную сеть
-        // let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
+        let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
         
         // Демонстрация работы сети
-        // demo_franchise_network(&franchise_network);
+        demo_franchise_network(&franchise_network);
         
         // Запускаем POS API сервер
-        // let pos_api_server = PosApiServer::new(franchise_network, 3001);
-        // pos_api_server.start();
+        let pos_api_server = PosApiServer::new(franchise_network, 3001);
+        pos_api_server.start();
         return;
     }
 
@@ -3409,20 +3409,20 @@ async fn main() {
         println!("🌐 Starting P2P Network...");
         
         // Создаем франшизную сеть
-        // let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
+        let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
         
         // Демонстрация работы сети
-        // demo_franchise_network(&franchise_network);
+        demo_franchise_network(&franchise_network);
         
         // Создаем P2P узел
         let node_id = env::var("NODE_ID").unwrap_or_else(|_| "1".to_string()).parse::<u64>().unwrap_or(1);
         let port = env::var("P2P_PORT").unwrap_or_else(|_| "8080".to_string()).parse::<u16>().unwrap_or(8080);
         let address: std::net::SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
         
-        // let p2p_node = P2PNode::new(node_id, address, franchise_network);
+        let p2p_node = P2PNode::new(node_id, address, franchise_network);
         
-        // println!("🚀 Starting P2P Node {} on {}", node_id, address);
-        // p2p_node.start();
+        println!("🚀 Starting P2P Node {} on {}", node_id, address);
+        p2p_node.start();
         return;
     }
 
@@ -3431,26 +3431,26 @@ async fn main() {
         println!("🌐 Starting Full Decentralized Network...");
         
         // Создаем франшизную сеть
-        // let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
+        let franchise_network = Arc::new(Mutex::new(FranchiseNetwork::new("master_owner_georgia".to_string())));
         
         // Демонстрация работы сети
-        // demo_franchise_network(&franchise_network);
+        demo_franchise_network(&franchise_network);
         
         // Создаем IPFS хранилище
-        // let mut ipfs_storage = IPFSStorage::new("https://ipfs.io/ipfs/".to_string());
+        let mut ipfs_storage = IPFSStorage::new("https://ipfs.io/ipfs/".to_string());
         
         // Демонстрация IPFS
-        // demo_ipfs_storage(&mut ipfs_storage, &franchise_network);
+        demo_ipfs_storage(&mut ipfs_storage, &franchise_network);
         
         // Создаем P2P узел с IPFS
-        // let node_id = env::var("NODE_ID").unwrap_or_else(|_| "1".to_string()).parse::<u64>().unwrap_or(1);
-        // let port = env::var("P2P_PORT").unwrap_or_else(|_| "8080".to_string()).parse::<u16>().unwrap_or(8080);
-        // let address = format!("127.0.0.1:{}", port).parse().unwrap();
+        let node_id = env::var("NODE_ID").unwrap_or_else(|_| "1".to_string()).parse::<u64>().unwrap_or(1);
+        let port = env::var("P2P_PORT").unwrap_or_else(|_| "8080".to_string()).parse::<u16>().unwrap_or(8080);
+        let address = format!("127.0.0.1:{}", port).parse().unwrap();
         
-        // let p2p_node = P2PNode::new(node_id, address, franchise_network);
+        let p2p_node = P2PNode::new(node_id, address, franchise_network);
         
-        // println!("🚀 Starting Full Decentralized Node {} on {}", node_id, address);
-        // p2p_node.start();
+        println!("🚀 Starting Full Decentralized Node {} on {}", node_id, address);
+        p2p_node.start();
         return;
     }
     
@@ -3460,7 +3460,6 @@ async fn main() {
 }
 
 // Демонстрация работы франшизной сети
-/*
 fn demo_franchise_network(franchise_network: &Arc<Mutex<FranchiseNetwork>>) {
     println!("\n🏪 === FRANCHISE NETWORK DEMO ===");
     
@@ -3574,17 +3573,15 @@ fn demo_franchise_network(franchise_network: &Arc<Mutex<FranchiseNetwork>>) {
     println!("\n🌐 Franchise Network API is ready on port 3001!");
     println!("   Try: curl -X POST http://localhost:3001/ -H 'Content-Type: application/json' -d '{{\"GetNetworkStats\": null}}'");
 }
-*/
 
 // Демонстрация IPFS хранилища
-/*
 fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mutex<FranchiseNetwork>>) {
     println!("\n📦 === IPFS STORAGE DEMO ===");
     
     // 1. Создаем пример меню
-    let menu_data = crate::ipfs_storage::MenuData {
+    let menu_data = blockchain_project::ipfs_storage::MenuData {
         items: vec![
-            crate::ipfs_storage::MenuItem {
+            blockchain_project::ipfs_storage::MenuItem {
                 id: "khinkali_001".to_string(),
                 name: "Хинкали".to_string(),
                 description: "Традиционные грузинские хинкали с мясом".to_string(),
@@ -3592,7 +3589,7 @@ fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mut
                 category: "Основные блюда".to_string(),
                 ingredients: vec!["мука".to_string(), "говядина".to_string(), "лук".to_string()],
                 image_hash: Some("QmKhinkaliImage".to_string()),
-                nutritional_info: crate::ipfs_storage::NutritionalInfo {
+                nutritional_info: blockchain_project::ipfs_storage::NutritionalInfo {
                     calories: 250,
                     protein: 15.0,
                     carbs: 30.0,
@@ -3600,7 +3597,7 @@ fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mut
                     fiber: 2.0,
                 },
             },
-            crate::ipfs_storage::MenuItem {
+            blockchain_project::ipfs_storage::MenuItem {
                 id: "khachapuri_001".to_string(),
                 name: "Хачапури".to_string(),
                 description: "Грузинский сырный хлеб".to_string(),
@@ -3608,7 +3605,7 @@ fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mut
                 category: "Основные блюда".to_string(),
                 ingredients: vec!["мука".to_string(), "сыр".to_string(), "яйцо".to_string()],
                 image_hash: Some("QmKhachapuriImage".to_string()),
-                nutritional_info: crate::ipfs_storage::NutritionalInfo {
+                nutritional_info: blockchain_project::ipfs_storage::NutritionalInfo {
                     calories: 400,
                     protein: 20.0,
                     carbs: 35.0,
@@ -3679,8 +3676,7 @@ fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mut
     
     // Запускаем веб-сервер для обслуживания HTML интерфейсов и API
     println!("\n🌐 === ЗАПУСК ВЕБ-СЕРВЕРА ===");
-    let enhanced_web_server = EnhancedWebServer::new(8080)
-        .with_video_handler(video_http_handler);
+    let enhanced_web_server = EnhancedWebServer::new(8080);
     
     // Запускаем веб-сервер в отдельном потоке
     thread::spawn(move || {
@@ -3713,7 +3709,6 @@ fn demo_ipfs_storage(ipfs_storage: &mut IPFSStorage, franchise_network: &Arc<Mut
         thread::sleep(std::time::Duration::from_secs(1));
     }
 }
-*/
 
 #[cfg(test)]
 mod tests {

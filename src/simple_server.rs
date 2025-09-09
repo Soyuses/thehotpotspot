@@ -1,19 +1,15 @@
-// Временно закомментируем весь файл для исправления тестов
-/*
-use std::sync::{Arc, Mutex};
+// Simple HTTP Server for blockchain API
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 use std::thread;
-// use crate::main::{Blockchain, MenuItem, Order};
 
 pub struct SimpleServer {
-    // blockchain: Arc<Mutex<Blockchain>>,
     port: u16,
 }
 
 impl SimpleServer {
-    pub fn new(blockchain: Arc<Mutex<Blockchain>>, port: u16) -> Self {
-        SimpleServer { blockchain, port }
+    pub fn new(port: u16) -> Self {
+        SimpleServer { port }
     }
 
     pub fn start(&self) {
@@ -25,9 +21,8 @@ impl SimpleServer {
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    let blockchain = Arc::clone(&self.blockchain);
                     thread::spawn(move || {
-                        Self::handle_client(stream, blockchain);
+                        Self::handle_client(stream);
                     });
                 }
                 Err(e) => {
@@ -37,20 +32,20 @@ impl SimpleServer {
         }
     }
 
-    fn handle_client(mut stream: TcpStream, blockchain: Arc<Mutex<Blockchain>>) {
+    fn handle_client(mut stream: TcpStream) {
         let mut buffer = [0; 4096];
         
         match stream.read(&mut buffer) {
             Ok(size) => {
                 let request = String::from_utf8_lossy(&buffer[..size]);
-                let response = Self::process_request(&request, blockchain);
+                let response = Self::process_request(&request);
                 
                 let http_response = format!(
                     "HTTP/1.1 200 OK\r\n\
                      Content-Type: application/json\r\n\
                      Access-Control-Allow-Origin: *\r\n\
-                     Access-Control-Allow-Headers: Content-Type\r\n\
                      Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n\
+                     Access-Control-Allow-Headers: Content-Type\r\n\
                      Content-Length: {}\r\n\
                      \r\n\
                      {}",
@@ -68,91 +63,17 @@ impl SimpleServer {
         }
     }
 
-    fn process_request(request: &str, blockchain: Arc<Mutex<Blockchain>>) -> String {
+    fn process_request(request: &str) -> String {
         // Handle OPTIONS request for CORS
         if request.starts_with("OPTIONS") {
             return "{}".to_string();
         }
 
-        // Extract JSON from POST request
-        let json_start = request.find("\r\n\r\n");
-        if json_start.is_none() {
-            return serde_json::json!({"error": "Invalid request format"}).to_string();
-        }
-
-        let json_start = json_start.unwrap() + 4;
-        let json_str = &request[json_start..];
-        
-        // Try to parse as wrapped enum (e.g., {"GetMenu": {}})
-        if let Ok(value) = serde_json::from_str::<serde_json::Value>(json_str) {
-            if let Some(obj) = value.as_object() {
-                for (key, val) in obj {
-                    match key.as_str() {
-                        "GetMenu" => {
-                            let mut bc = blockchain.lock().unwrap();
-                            let menu_items = bc.menu_items.clone();
-                            return serde_json::json!({"Menu": menu_items}).to_string();
-                        }
-                        "AddMenuItem" => {
-                            if let Ok(menu_item) = serde_json::from_value::<MenuItem>(val.clone()) {
-                                let mut bc = blockchain.lock().unwrap();
-                                bc.menu_items.push(menu_item);
-                                return serde_json::json!({"Success": "Menu item added successfully"}).to_string();
-                            }
-                        }
-                        "UpdateMenuItem" => {
-                            if let Ok(menu_item) = serde_json::from_value::<MenuItem>(val.clone()) {
-                                let mut bc = blockchain.lock().unwrap();
-                                if let Some(pos) = bc.menu_items.iter().position(|item| item.id == menu_item.id) {
-                                    bc.menu_items[pos] = menu_item;
-                                }
-                                return serde_json::json!({"Success": "Menu item updated successfully"}).to_string();
-                            }
-                        }
-                        "DeleteMenuItem" => {
-                            if let Ok(id) = serde_json::from_value::<String>(val.clone()) {
-                                let mut bc = blockchain.lock().unwrap();
-                                bc.menu_items.retain(|item| item.id != id);
-                                return serde_json::json!({"Success": "Menu item deleted successfully"}).to_string();
-                            }
-                        }
-                        "GetOrders" => {
-                            let mut bc = blockchain.lock().unwrap();
-                            let orders = bc.orders.clone();
-                            return serde_json::json!({"Orders": orders}).to_string();
-                        }
-                        "CreateOrder" => {
-                            if let Ok(order) = serde_json::from_value::<Order>(val.clone()) {
-                                let mut bc = blockchain.lock().unwrap();
-                                bc.orders.push(order);
-                                return serde_json::json!({"Success": "Order created successfully"}).to_string();
-                            }
-                        }
-                        "ConfirmOrder" => {
-                            if let Ok(id) = serde_json::from_value::<String>(val.clone()) {
-                                let mut bc = blockchain.lock().unwrap();
-                                match bc.confirm_order(id) {
-                                    Ok(_) => return serde_json::json!({"Success": "Order confirmed successfully"}).to_string(),
-                                    Err(e) => return serde_json::json!({"Error": e}).to_string(),
-                                }
-                            }
-                        }
-                        "CancelOrder" => {
-                            if let Ok(id) = serde_json::from_value::<String>(val.clone()) {
-                                let mut bc = blockchain.lock().unwrap();
-                                match bc.cancel_order(id, "Cancelled via API".to_string()) {
-                                    Ok(_) => return serde_json::json!({"Success": "Order cancelled successfully"}).to_string(),
-                                    Err(e) => return serde_json::json!({"Error": e}).to_string(),
-                                }
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-        }
-        
-        serde_json::json!({"error": "Invalid request"}).to_string()
+        // Simple response for now
+        serde_json::json!({
+            "message": "Simple server is running",
+            "status": "ok",
+            "note": "Full blockchain integration will be added later"
+        }).to_string()
     }
 }
-*/

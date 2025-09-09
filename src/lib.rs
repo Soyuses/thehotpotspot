@@ -1,4 +1,4 @@
-// pub mod simple_server; // Временно закомментирован
+pub mod simple_server;
 pub mod web_server;
 pub mod enhanced_web_server;
 pub mod franchise_network;
