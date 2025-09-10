@@ -17,7 +17,7 @@ pub struct RegisterNodeRequest {
 pub struct RecordSaleRequest {
     pub node_id: u64,
     pub sale_id: String,
-    pub price_gel: f64,
+    pub price_subunits: u128, // Цена в subunits (1/100 GEL)
     pub buyer_meta: String,
     pub pos_id: String,
     pub items: Vec<SaleItem>,
@@ -154,7 +154,7 @@ impl PosApiServer {
                                 match network.record_sale(
                                     req.node_id,
                                     req.sale_id,
-                                    req.price_gel,
+                                    req.price_subunits,
                                     req.buyer_meta,
                                     req.pos_id,
                                     req.items

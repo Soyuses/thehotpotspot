@@ -13,6 +13,9 @@ use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write};
 use std::thread;
 
+// Импортируем конфигурацию валюты
+use blockchain_project::config::{self, utils as config_utils};
+
 // Импорты для модулей блокчейна
 use blockchain_project::simple_server::SimpleServer;
 use blockchain_project::web_server::WebServer;
@@ -32,6 +35,48 @@ use blockchain_project::streaming_integration::{
     TwitchConfig, YouTubeConfig
 };
 use blockchain_project::enhanced_web_server::EnhancedWebServer;
+
+// Импорты для регуляторных экспортов
+use blockchain_project::regulatory_exports::{
+    RegulatoryExporter, ExportFormat, HolderRegistryEntry, EmissionRegistryEntry, 
+    CorporateActionEntry, HolderUpdate
+};
+
+// Импорты для relayer сервиса
+use blockchain_project::relayer_service::{
+    RelayerService, RelayerConfig, RelayerTransactionRequest, RelayerResponse,
+    RelayerError, TransactionStatus as RelayerTransactionStatus
+};
+
+// Импорты для HD wallet
+use blockchain_project::hd_wallet::{
+    HDWalletManager, HDWallet, CheckWallet, WalletType, WalletStatus,
+    WalletStatistics, HDWalletError
+};
+
+// Импорты для KYC/AML
+use blockchain_project::kyc_aml::{
+    KYCAmlManager, KYCUser, KYCStatus, KYCLevel, DocumentType, DocumentStatus,
+    UserRole, Permission, Role, UserRoleAssignment, KYCStatistics, KYCAmlError,
+    UserRegistrationData, Address, AuditLogEntry
+};
+
+// Импорты для базы данных
+use blockchain_project::database::{
+    DatabaseManager, DatabaseConfig, DatabaseStats, CleanupStats, DatabaseError, UserData
+};
+
+// Импорты для observability
+use blockchain_project::observability::{
+    ObservabilityManager, ObservabilityConfig, LogLevel, MetricType, AlertSeverity, AlertStatus,
+    ObservabilityStats, ErrorInfo
+};
+
+// Импорты для API versioning
+use blockchain_project::api_versioning::{
+    ApiVersionManager, ApiConfig, ApiVersion, VersionStatus, VersionInfo, VersionWarning,
+    VersionStatistics, OpenApiSpec, ChangeType, ChangeImpact
+};
 
 // Utility Token for voting
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -83,7 +128,8 @@ struct Check {
     check_id: String,
     qr_code: String,
     activation_code: String,
-    amount: f64,
+    amount_subunits: u128, // Сумма в subunits (1/100 GEL)
+    currency: String, // Валюта (GEL)
     food_items: Vec<String>,
     timestamp: u64,
     is_activated: bool,
@@ -93,13 +139,14 @@ struct Check {
 }
 
 impl Check {
-    fn new(amount: f64, food_items: Vec<String>) -> Self {
+    fn new(amount_gel: f64, food_items: Vec<String>) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
         
-        let check_id = Self::generate_check_id(amount, &food_items, timestamp);
+        let amount_subunits = config_utils::gel_to_subunits(amount_gel);
+        let check_id = Self::generate_check_id(amount_subunits, &food_items, timestamp);
         let activation_code = Self::generate_activation_code();
         let blockchain_account = Self::generate_blockchain_account();
         
@@ -111,7 +158,8 @@ impl Check {
             check_id,
             qr_code,
             activation_code,
-            amount,
+            amount_subunits,
+            currency: config::CURRENCY.to_string(),
             food_items,
             timestamp,
             is_activated: false,
@@ -127,8 +175,8 @@ impl Check {
         check
     }
 
-    fn generate_check_id(amount: f64, food_items: &[String], timestamp: u64) -> String {
-        let data = format!("{}{}{}", amount, food_items.join(""), timestamp);
+    fn generate_check_id(amount_subunits: u128, food_items: &[String], timestamp: u64) -> String {
+        let data = format!("{}{}{}", amount_subunits, food_items.join(""), timestamp);
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
         hex::encode(&hasher.finalize()[..16])
@@ -160,8 +208,8 @@ impl Check {
 struct BlockchainAccount {
     address: String,
     status: AccountStatus,
-    security_tokens: f64,
-    utility_tokens: f64,
+    security_tokens: u128, // в subunits
+    utility_tokens: u128, // в subunits
     personal_data: Option<PersonalData>,
     created_timestamp: u64,
     activated_timestamp: Option<u64>,
@@ -187,8 +235,8 @@ impl BlockchainAccount {
         BlockchainAccount {
             address,
             status: AccountStatus::Sleep,
-            security_tokens: 0.0,
-            utility_tokens: 0.0,
+            security_tokens: 0,
+            utility_tokens: 0,
             personal_data: None,
             created_timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -277,7 +325,7 @@ struct CharityFund {
     fund_id: String,
     fund_name: String,
     owner_family: String,
-    total_donations: f64,
+    total_donations: u128, // в subunits
     created_timestamp: u64,
     is_active: bool,
 }
@@ -289,7 +337,7 @@ impl CharityFund {
             fund_id,
             fund_name: format!("Благотворительный фонд семьи {}", owner_family),
             owner_family,
-            total_donations: 0.0,
+            total_donations: 0,
             created_timestamp: SystemTime::now()
                 .duration_since(UNIX_EPOCH)
                 .unwrap()
@@ -307,8 +355,8 @@ impl CharityFund {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct TokenHolder {
     address: String,
-    security_tokens: f64,
-    utility_tokens: f64,
+    security_tokens: u128, // в subunits
+    utility_tokens: u128, // в subunits
     role: UserRole,
     is_main_owner: bool,
     is_charity_fund: bool, // Является ли благотворительным фондом
@@ -324,8 +372,8 @@ impl TokenHolder {
     fn new(address: String, is_main_owner: bool) -> Self {
         TokenHolder {
             address,
-            security_tokens: 0.0,
-            utility_tokens: 0.0,
+            security_tokens: 0,
+            utility_tokens: 0,
             role: if is_main_owner { UserRole::MainOwner } else { UserRole::Unauthorized },
             is_main_owner,
             is_charity_fund: false,
@@ -341,8 +389,8 @@ impl TokenHolder {
     fn new_charity_fund(address: String, fund_name: String) -> Self {
         TokenHolder {
             address,
-            security_tokens: 0.0,
-            utility_tokens: 0.0,
+            security_tokens: 0,
+            utility_tokens: 0,
             role: UserRole::MainOwner, // Благотворительный фонд имеет особый статус
             is_main_owner: false,
             is_charity_fund: true,
@@ -358,8 +406,8 @@ impl TokenHolder {
     fn new_franchise_owner(address: String, franchise_nodes: Vec<String>) -> Self {
         TokenHolder {
             address,
-            security_tokens: 0.0,
-            utility_tokens: 0.0,
+            security_tokens: 0,
+            utility_tokens: 0,
             role: UserRole::Unauthorized,
             is_main_owner: false,
             is_charity_fund: false,
@@ -377,12 +425,12 @@ impl TokenHolder {
         self.is_authorized = true;
     }
 
-    fn add_security_tokens(&mut self, amount: f64) {
+    fn add_security_tokens(&mut self, amount: u128) {
         self.security_tokens += amount;
         self.update_role();
     }
 
-    fn add_utility_tokens(&mut self, amount: f64) {
+    fn add_utility_tokens(&mut self, amount: u128) {
         self.utility_tokens += amount;
     }
 
@@ -440,7 +488,8 @@ pub struct MenuItem {
     pub id: String,
     name: String,
     description: String,
-    price: f64,
+    price_subunits: u128, // Цена в subunits (1/100 GEL)
+    currency: String, // Валюта (GEL)
     availability: u32, // количество доступных штук
     priority_rank: u32, // приоритетность (1-10, где 10 - высший)
     cooking_time_minutes: u32, // время готовки в минутах
@@ -486,18 +535,19 @@ pub struct Order {
     id: String,
     customer_wallet: String,
     items: Vec<OrderItem>,
-    total_amount: f64,
+    total_amount_subunits: u128, // Сумма в subunits (1/100 GEL)
+    currency: String, // Валюта (GEL)
     delivery_time_minutes: u32, // когда может приехать курьер
     status: OrderStatus,
     created_timestamp: u64,
     confirmed_timestamp: Option<u64>,
     cancellation_reason: Option<String>,
-    tokens_issued: f64, // количество токенов, выданных за заказ
+    tokens_issued_subunits: u128, // количество токенов в subunits, выданных за заказ
 }
 
 #[cfg_attr(test, allow(dead_code))]
 impl MenuItem {
-    fn new(name: String, description: String, price: f64, suggested_by: String, voting_duration_days: u64) -> Self {
+    fn new(name: String, description: String, price_subunits: u128, suggested_by: String, voting_duration_days: u64) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
@@ -507,7 +557,8 @@ impl MenuItem {
             id: Self::generate_id(&name, &suggested_by, timestamp),
             name,
             description,
-            price,
+            price_subunits,
+            currency: config::CURRENCY.to_string(),
             availability: 0,
             priority_rank: 5, // средний приоритет по умолчанию
             cooking_time_minutes: 15, // 15 минут по умолчанию
@@ -526,7 +577,7 @@ impl MenuItem {
     fn new_with_details(
         name: String, 
         description: String, 
-        price: f64,
+        price_subunits: u128, // Цена в subunits (1/100 GEL)
         availability: u32,
         priority_rank: u32,
         cooking_time_minutes: u32,
@@ -545,7 +596,8 @@ impl MenuItem {
             id: Self::generate_id(&name, &suggested_by, timestamp),
             name,
             description,
-            price,
+            price_subunits,
+            currency: config::CURRENCY.to_string(),
             availability,
             priority_rank,
             cooking_time_minutes,
@@ -622,22 +674,21 @@ impl Order {
             .unwrap()
             .as_secs();
         
-        let total_amount: f64 = items.iter().map(|item| {
-            // Здесь нужно будет получить цену из меню
-            item.quantity as f64 * 10.0 // временная заглушка
-        }).sum();
+        // Временная заглушка - будет пересчитано в create_order
+        let total_amount_subunits = 0u128;
         
         Order {
             id: Self::generate_order_id(&customer_wallet, timestamp),
             customer_wallet,
             items,
-            total_amount,
+            total_amount_subunits,
+            currency: config::CURRENCY.to_string(),
             delivery_time_minutes,
             status: OrderStatus::Pending,
             created_timestamp: timestamp,
             confirmed_timestamp: None,
             cancellation_reason: None,
-            tokens_issued: 0.0,
+            tokens_issued_subunits: 0,
         }
     }
 
@@ -656,7 +707,7 @@ impl Order {
                 .unwrap()
                 .as_secs()
         );
-        self.tokens_issued = tokens_issued;
+        self.tokens_issued_subunits = tokens_issued as u128;
     }
 
     fn cancel(&mut self, reason: String) {
@@ -670,43 +721,45 @@ impl Order {
 struct Transaction {
     from: String,
     to: String,
-    amount: f64,
+    amount_subunits: u128, // Сумма в subunits (1/100 GEL)
+    currency: String, // Валюта (GEL)
     food_items: Vec<String>,
     timestamp: u64,
     transaction_id: String,
     check: Option<Check>,
-    security_tokens_issued: f64,
-    utility_tokens_issued: f64,
+    security_tokens_issued_subunits: u128, // Security токены в subunits
+    utility_tokens_issued_subunits: u128, // Utility токены в subunits
 }
 
 impl Transaction {
-    fn new(from: String, to: String, amount: f64, food_items: Vec<String>, 
-           security_tokens: f64, utility_tokens: f64) -> Self {
+    fn new(from: String, to: String, amount_subunits: u128, food_items: Vec<String>, 
+           security_tokens: u128, utility_tokens: u128) -> Self {
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
         
-        let transaction_id = Self::generate_transaction_id(&from, &to, amount, &food_items, timestamp);
+        let transaction_id = Self::generate_transaction_id(&from, &to, amount_subunits, &food_items, timestamp);
         
         // Generate check for the transaction
-        let check = Check::new(amount, food_items.clone());
+        let check = Check::new(config::utils::subunits_to_gel(amount_subunits), food_items.clone());
         
         Transaction {
             from,
             to,
-            amount,
+            amount_subunits,
+            currency: config::CURRENCY.to_string(),
             food_items,
             timestamp,
             transaction_id,
             check: Some(check),
-            security_tokens_issued: security_tokens,
-            utility_tokens_issued: utility_tokens,
+            security_tokens_issued_subunits: security_tokens as u128,
+            utility_tokens_issued_subunits: utility_tokens as u128,
         }
     }
 
-    fn generate_transaction_id(from: &str, to: &str, amount: f64, food_items: &[String], timestamp: u64) -> String {
-        let data = format!("{}{}{}{}{}", from, to, amount, food_items.join(""), timestamp);
+    fn generate_transaction_id(from: &str, to: &str, amount_subunits: u128, food_items: &[String], timestamp: u64) -> String {
+        let data = format!("{}{}{}{}{}", from, to, amount_subunits, food_items.join(""), timestamp);
         let mut hasher = Sha256::new();
         hasher.update(data.as_bytes());
         hex::encode(hasher.finalize())
@@ -743,6 +796,13 @@ pub struct Blockchain {
     unclaimed_tokens: Vec<UnclaimedTokensRecord>, // Невостребованные токены
     annual_distributions: Vec<AnnualDistribution>, // История годовых распределений
     current_year: u32, // Текущий год для отслеживания
+    regulatory_exporter: RegulatoryExporter, // Регуляторные экспорты
+    relayer_service: RelayerService, // Relayer сервис для обработки транзакций
+    hd_wallet_manager: HDWalletManager, // HD wallet менеджер
+    kyc_aml_manager: KYCAmlManager, // KYC/AML менеджер
+    database_manager: Option<DatabaseManager>, // Database менеджер (опциональный для совместимости)
+    observability_manager: ObservabilityManager, // Observability менеджер
+    api_version_manager: ApiVersionManager, // API versioning менеджер
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -793,39 +853,47 @@ impl Blockchain {
             unclaimed_tokens: vec![],
             annual_distributions: vec![],
             current_year: 2024, // Текущий год
+            regulatory_exporter: RegulatoryExporter::new(),
+            relayer_service: RelayerService::new(RelayerConfig::default()),
+            hd_wallet_manager: HDWalletManager::new("thehotpotspot_master_seed_2024".to_string()),
+            kyc_aml_manager: KYCAmlManager::new(),
+            database_manager: None, // Инициализируется отдельно при необходимости
+            observability_manager: ObservabilityManager::new(ObservabilityConfig::default()),
+            api_version_manager: ApiVersionManager::new(ApiConfig::default()),
         }
     }
 
-    fn process_purchase(&mut self, customer: String, food_truck: String, amount: f64, food_items: Vec<String>) -> Check {
-        // Новая логика распределения токенов:
+    fn process_purchase(&mut self, customer: String, food_truck: String, amount_subunits: u128, food_items: Vec<String>) -> Check {
+        // Новая логика распределения токенов (1:1 utility токены):
         // Нода владельца сети: 48% владелец сети, 3% фонд, 49% покупатель
         // Нода франчайзи: 25% владелец сети, 24% франчайзи, 3% фонд, 49% покупатель
+        // Utility токены: 1:1 с security токенами для всех участников
         
         let is_franchise_node = self.franchise_nodes.contains_key(&food_truck);
         
         let (main_owner_tokens, franchise_owner_tokens, charity_tokens, customer_tokens) = if is_franchise_node {
-            // Для франшизной ноды: 25% + 24% + 3% + 49% = 101% (ошибка в требованиях, используем 25% + 24% + 3% + 48% = 100%)
-            let main_owner_tokens = amount * 0.25; // 25% владельцу сети
-            let franchise_owner_tokens = amount * 0.24; // 24% владельцу франшизы
-            let charity_tokens = amount * 0.03; // 3% фонду
-            let customer_tokens = amount * 0.48; // 48% покупателю
+            // Для франшизной ноды: 25% + 24% + 3% + 48% = 100%
+            let main_owner_tokens = config::utils::calculate_percentage(amount_subunits, 25); // 25% владельцу сети
+            let franchise_owner_tokens = config::utils::calculate_percentage(amount_subunits, 24); // 24% владельцу франшизы
+            let charity_tokens = config::utils::calculate_percentage(amount_subunits, 3); // 3% фонду
+            let customer_tokens = config::utils::calculate_percentage(amount_subunits, 48); // 48% покупателю
             (main_owner_tokens, franchise_owner_tokens, charity_tokens, customer_tokens)
         } else {
             // Для ноды владельца сети: 48% + 3% + 49% = 100%
-            let main_owner_tokens = amount * 0.48; // 48% владельцу сети
-            let franchise_owner_tokens = 0.0; // 0% для франшизы
-            let charity_tokens = amount * 0.03; // 3% фонду
-            let customer_tokens = amount * 0.49; // 49% покупателю
+            let main_owner_tokens = config::utils::calculate_percentage(amount_subunits, 48); // 48% владельцу сети
+            let franchise_owner_tokens = 0; // 0% для франшизы
+            let charity_tokens = config::utils::calculate_percentage(amount_subunits, 3); // 3% фонду
+            let customer_tokens = config::utils::calculate_percentage(amount_subunits, 49); // 49% покупателю
             (main_owner_tokens, franchise_owner_tokens, charity_tokens, customer_tokens)
         };
         
-        let utility_tokens = amount * 0.1; // 10% utility токенов для голосования
+        let utility_tokens = amount_subunits; // 1:1 utility токенов для голосования (100%)
         
         // Create transaction with check
         let transaction = Transaction::new(
             customer.clone(),
             food_truck.clone(),
-            amount,
+            amount_subunits,
             food_items.clone(),
             customer_tokens, // Покупатель получает свою долю
             utility_tokens,
@@ -849,7 +917,7 @@ impl Blockchain {
         }
         
         // 2. Владелец франшизы получает свою долю (только для франшизных нод)
-        if is_franchise_node && franchise_owner_tokens > 0.0 {
+        if is_franchise_node && franchise_owner_tokens > 0 {
             let franchise_owner = self.franchise_nodes.get(&food_truck).unwrap().clone();
             if !self.token_holders.contains_key(&franchise_owner) {
                 let mut new_holder = TokenHolder::new_franchise_owner(franchise_owner.clone(), vec![food_truck.clone()]);
@@ -953,7 +1021,7 @@ impl Blockchain {
         Err("Check not found or invalid activation code".to_string())
     }
 
-    fn suggest_menu_item(&mut self, name: String, description: String, price: f64, suggested_by: String) -> Result<(), String> {
+    fn suggest_menu_item(&mut self, name: String, description: String, price_subunits: u128, suggested_by: String) -> Result<(), String> {
         // Only main owner and big stacks can suggest menu items
         if let Some(holder) = self.token_holders.get(&suggested_by) {
             if holder.role != UserRole::MainOwner && holder.role != UserRole::BigStack {
@@ -963,12 +1031,12 @@ impl Blockchain {
             return Err("Invalid suggester address".to_string());
         }
         
-        let menu_item = MenuItem::new(name, description, price, suggested_by, 7); // 7 days voting
+        let menu_item = MenuItem::new(name, description, price_subunits, suggested_by, 7); // 7 days voting
         self.menu_items.push(menu_item);
         Ok(())
     }
 
-    fn add_menu_item_with_details(&mut self, name: String, description: String, price: f64, 
+    fn add_menu_item_with_details(&mut self, name: String, description: String, price_subunits: u128, 
                                  availability: u32, priority_rank: u32, cooking_time_minutes: u32,
                                  ingredients: Vec<Ingredient>, suggested_by: String) -> Result<(), String> {
         // Only main owner can add detailed menu items
@@ -981,7 +1049,7 @@ impl Blockchain {
         }
         
         let menu_item = MenuItem::new_with_details(
-            name, description, price, availability, priority_rank, 
+            name, description, price_subunits, availability, priority_rank, 
             cooking_time_minutes, ingredients, suggested_by, 7
         );
         self.menu_items.push(menu_item);
@@ -1013,13 +1081,13 @@ impl Blockchain {
         let mut order = Order::new(customer_wallet, items, delivery_time_minutes);
         
         // Рассчитываем правильную сумму заказа
-        let mut total_amount = 0.0;
+        let mut total_amount_subunits = 0u128;
         for order_item in &order.items {
             if let Some(menu_item) = self.menu_items.iter().find(|item| item.id == order_item.menu_item_id) {
-                total_amount += menu_item.price * order_item.quantity as f64;
+                total_amount_subunits += menu_item.price_subunits * order_item.quantity as u128;
             }
         }
-        order.total_amount = total_amount;
+        order.total_amount_subunits = total_amount_subunits;
         
         self.orders.push(order.clone());
         Ok(order)
@@ -1033,8 +1101,8 @@ impl Blockchain {
             if order.status != OrderStatus::Pending {
                 return Err("Order is not pending".to_string());
             }
-            security_tokens = order.total_amount;
-            utility_tokens = order.total_amount * 0.1;
+            security_tokens = order.total_amount_subunits as f64;
+            utility_tokens = order.total_amount_subunits as f64;
             customer_wallet = order.customer_wallet.clone();
             items_clone = order.items.clone();
         }
@@ -1066,7 +1134,7 @@ impl Blockchain {
             order_created_ts = order_mut.created_timestamp;
             customer_wallet_clone = order_mut.customer_wallet.clone();
             total_amount_clone = order_mut.total_amount;
-            tokens_issued_clone = order_mut.tokens_issued;
+            tokens_issued_clone = order_mut.tokens_issued_subunits as f64;
             status_clone = match order_mut.status {
                 OrderStatus::Pending => "Pending".to_string(),
                 OrderStatus::Confirmed => "Confirmed".to_string(),
@@ -1202,8 +1270,8 @@ impl Blockchain {
         let record = BlockchainOrderRecord {
             order_id: order.id.clone(),
             customer_wallet: order.customer_wallet.clone(),
-            total_amount: order.total_amount,
-            tokens_issued: order.tokens_issued,
+            total_amount: order.total_amount_subunits as f64,
+            tokens_issued: order.tokens_issued_subunits as f64,
             timestamp: order.created_timestamp,
             status: match order.status {
                 OrderStatus::Pending => "Pending".to_string(),
@@ -1404,8 +1472,8 @@ impl Blockchain {
         let total_security_tokens: f64 = self.token_holders.values().map(|v| v.security_tokens).sum();
         let total_utility_tokens = self.utility_token.total_supply;
         
-        let security_tokens_to_transfer = check.amount;
-        let utility_tokens_to_transfer = check.amount * 0.1;
+        let security_tokens_to_transfer = check.amount_subunits as f64;
+        let utility_tokens_to_transfer = check.amount_subunits as f64;
 
         // Проверяем, не превысит ли перенос максимальную долю владения
         if let Some(to_holder) = self.token_holders.get(&authorized_user.wallet_address) {
@@ -1612,14 +1680,15 @@ impl Blockchain {
         Ok(())
     }
     
-    // Эмиссия токенов для привлечения китов-инвесторов
-    fn emit_tokens_for_investors(&mut self, amount: f64, investor_address: String) -> Result<(), String> {
+    // Эмиссия токенов для привлечения китов-инвесторов (1:1 utility токены)
+    fn emit_tokens_for_investors(&mut self, amount_gel: f64, investor_address: String) -> Result<(), String> {
         // Новая логика эмиссии для "китов": 48% владелец сети, 3% фонд, 49% инвестор
-        let main_owner_tokens = amount * 0.48; // 48% владельцу сети
-        let charity_tokens = amount * 0.03; // 3% фонду
-        let investor_tokens = amount * 0.49; // 49% инвестору
+        // Utility токены: 1:1 с security токенами
+        let main_owner_tokens = amount_gel * 0.48; // 48% владельцу сети
+        let charity_tokens = amount_gel * 0.03; // 3% фонду
+        let investor_tokens = amount_gel * 0.49; // 49% инвестору
         
-        let utility_tokens = amount * 0.1; // 10% utility токенов для голосования
+        let utility_tokens = amount_gel * 1.0; // 1:1 utility токенов для голосования (100%)
         
         // Проверяем, что владелец не превысит лимит после эмиссии
         let current_owner_tokens = self.token_holders.get(&self.main_owner).map(|h| h.security_tokens).unwrap_or(0.0);
@@ -1921,6 +1990,85 @@ impl Block {
 }
 
 // API Request/Response structures
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct RelayerSaleItem {
+    pub item_id: String,
+    pub quantity: u32,
+    pub price_subunits: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct CheckItemRequest {
+    pub item_id: String,
+    pub name: String,
+    pub quantity: u32,
+    pub price_subunits: u128,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AddressRequest {
+    pub street: String,
+    pub city: String,
+    pub state: String,
+    pub postal_code: String,
+    pub country: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct DatabaseUserInfo {
+    pub user_id: String,
+    pub email: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub kyc_status: String,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct LogEntryInfo {
+    pub timestamp: String,
+    pub level: String,
+    pub message: String,
+    pub module: String,
+    pub thread_id: String,
+    pub metadata: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct MetricInfo {
+    pub name: String,
+    pub value: f64,
+    pub timestamp: String,
+    pub metric_type: String,
+    pub labels: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct AlertInfo {
+    pub alert_id: String,
+    pub name: String,
+    pub description: String,
+    pub severity: String,
+    pub status: String,
+    pub created_at: String,
+    pub labels: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ChangelogEntryInfo {
+    pub version: String,
+    pub date: String,
+    pub changes: Vec<ChangeEntryInfo>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ChangeEntryInfo {
+    pub change_type: String,
+    pub description: String,
+    pub impact: String,
+    pub affected_endpoints: Vec<String>,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 enum ApiRequest {
     GetMenu,
@@ -1947,7 +2095,7 @@ enum ApiRequest {
     AddMenuItem {
         name: String,
         description: String,
-        price: f64,
+        price_subunits: u128, // Цена в subunits (1/100 GEL)
         availability: u32,
         priority_rank: u32,
         cooking_time_minutes: u32,
@@ -1962,7 +2110,107 @@ enum ApiRequest {
     GetBalanceTransferHistory { limit: Option<u32> },
     GetNetworkSecurityReport,
     AddFranchiseNode { node_id: String, franchise_owner: String },
-    EmitTokensForInvestors { amount: f64, investor_address: String },
+    // Regulatory Export API endpoints
+    ExportHoldersRegistry { format: String }, // "CSV" or "JSON"
+    ExportEmissionsRegistry { format: String },
+    ExportCorporateActionsRegistry { format: String },
+    GenerateRegulatoryReport { format: String },
+    // Relayer Service API endpoints
+    ProcessRelayerTransaction {
+        sale_id: String,
+        node_id: u64,
+        pos_id: String,
+        amount_subunits: u128,
+        buyer_address: String,
+        buyer_meta: String,
+        items: Vec<RelayerSaleItem>,
+        signature: String,
+        timestamp: u64,
+    },
+    GetRelayerTransactionStatus { transaction_id: String },
+    GetRelayerStatistics,
+    // HD Wallet API endpoints
+    GenerateNodeWallet { node_id: u64, wallet_type: String },
+    GenerateCustomerWallet { customer_id: String },
+    GenerateCheckWallet { 
+        sale_id: String, 
+        node_id: u64, 
+        amount_subunits: u128, 
+        items: Vec<CheckItemRequest> 
+    },
+    ActivateCheckWallet { check_id: String, activation_code: String },
+    GetWalletInfo { wallet_id: String },
+    GetCheckWalletInfo { check_id: String },
+    GetWalletStatistics,
+    // KYC/AML API endpoints
+    RegisterUser {
+        email: String,
+        phone: Option<String>,
+        first_name: String,
+        last_name: String,
+        date_of_birth: Option<String>,
+        nationality: Option<String>,
+        address: Option<AddressRequest>,
+    },
+    StartKYCProcess { user_id: String, kyc_level: String },
+    UploadDocument {
+        user_id: String,
+        document_type: String,
+        file_hash: String,
+        file_path: String,
+    },
+    VerifyDocument {
+        user_id: String,
+        document_id: String,
+        verified_by: String,
+        approved: bool,
+        rejection_reason: Option<String>,
+    },
+    CompleteKYCProcess { user_id: String, verified_by: String },
+    AssignRole {
+        user_id: String,
+        role: String,
+        assigned_by: String,
+        expires_at: Option<String>,
+    },
+    CheckPermission { user_id: String, permission: String },
+    GetUserInfo { user_id: String },
+    GetKYCStatistics,
+    // Database API endpoints
+    InitializeDatabase { 
+        host: String, 
+        port: u16, 
+        database: String, 
+        username: String, 
+        password: String 
+    },
+    GetDatabaseStats,
+    CleanupOldData { days: i32 },
+    GetUserFromDatabase { user_id: String },
+    GetAllUsersFromDatabase { limit: Option<u32>, offset: Option<u32> },
+    // Observability API endpoints
+    GetLogs { level: Option<String>, limit: Option<u32> },
+    GetMetrics { metric_type: Option<String>, limit: Option<u32> },
+    GetAlerts { status: Option<String>, severity: Option<String> },
+    GetObservabilityStats,
+    GeneratePrometheusMetrics,
+    CreateAlert { 
+        alert_id: String, 
+        name: String, 
+        description: String, 
+        severity: String 
+    },
+    ResolveAlert { alert_id: String },
+    // API Versioning endpoints
+    GetApiVersion,
+    GetSupportedVersions,
+    GetVersionInfo { version: String },
+    GetVersionWarning { version: String },
+    GetChangelog { version: Option<String> },
+    GetVersionStatistics,
+    GenerateOpenApiSpec { version: String },
+    CheckVersionCompatibility { version1: String, version2: String },
+    EmitTokensForInvestors { amount_gel: f64, investor_address: String },
     GetMonitoringAlerts { limit: Option<u32> },
     GetCharityFundInfo,
     DistributeUnclaimedTokensAnnually,
@@ -2006,6 +2254,228 @@ enum ApiResponse {
     UnclaimedTokens { tokens: Vec<UnclaimedTokensRecord> },
     AnnualDistributions { distributions: Vec<AnnualDistribution> },
     ExpiredUnclaimedTokens { expired_checks: Vec<String> },
+    RegulatoryExport { data: String, format: String },
+    // Relayer Service responses
+    RelayerTransactionResponse { 
+        transaction_id: String, 
+        status: String, 
+        message: String, 
+        blockchain_tx_hash: Option<String> 
+    },
+    RelayerTransactionStatus { 
+        transaction_id: String, 
+        status: String, 
+        blockchain_tx_hash: Option<String>, 
+        error_message: Option<String> 
+    },
+    RelayerStatistics { 
+        total_processed: u64, 
+        total_successful: u64, 
+        total_failed: u64, 
+        total_retries: u64, 
+        average_processing_time_ms: u64 
+    },
+    // HD Wallet responses
+    WalletGenerated { 
+        wallet_id: String, 
+        address: String, 
+        derivation_path: String, 
+        public_key: String 
+    },
+    CheckWalletGenerated { 
+        check_id: String, 
+        wallet_address: String, 
+        qr_code: String, 
+        activation_code: String, 
+        expires_at: String 
+    },
+    CheckWalletActivated { 
+        check_id: String, 
+        wallet_address: String, 
+        activated_at: String 
+    },
+    WalletInfo { 
+        wallet_id: String, 
+        wallet_type: String, 
+        address: String, 
+        status: String, 
+        created_at: String 
+    },
+    CheckWalletInfo { 
+        check_id: String, 
+        wallet_address: String, 
+        amount_subunits: u128, 
+        is_activated: bool, 
+        expires_at: String 
+    },
+    WalletStatistics { 
+        total_wallets: u32, 
+        total_check_wallets: u32, 
+        active_wallets: u32, 
+        inactive_wallets: u32 
+    },
+    // KYC/AML responses
+    UserRegistered { 
+        user_id: String, 
+        email: String, 
+        kyc_status: String 
+    },
+    KYCProcessStarted { 
+        user_id: String, 
+        kyc_level: String, 
+        status: String 
+    },
+    DocumentUploaded { 
+        document_id: String, 
+        user_id: String, 
+        document_type: String 
+    },
+    DocumentVerified { 
+        document_id: String, 
+        user_id: String, 
+        approved: bool 
+    },
+    KYCProcessCompleted { 
+        user_id: String, 
+        kyc_status: String, 
+        risk_score: u8 
+    },
+    RoleAssigned { 
+        user_id: String, 
+        role: String, 
+        assigned_by: String 
+    },
+    PermissionCheck { 
+        user_id: String, 
+        permission: String, 
+        has_permission: bool 
+    },
+    UserInfo { 
+        user_id: String, 
+        email: String, 
+        first_name: String, 
+        last_name: String, 
+        kyc_status: String, 
+        kyc_level: String, 
+        risk_score: u8 
+    },
+    KYCStatistics { 
+        total_users: u32, 
+        total_documents: u32, 
+        verified: u32, 
+        pending: u32, 
+        rejected: u32, 
+        high_risk: u32 
+    },
+    // Database responses
+    DatabaseInitialized { 
+        message: String, 
+        config: String 
+    },
+    DatabaseStats { 
+        total_users: u32, 
+        total_documents: u32, 
+        total_wallets: u32, 
+        total_transactions: u32, 
+        total_audit_logs: u32 
+    },
+    CleanupCompleted { 
+        deleted_audit_logs: u32, 
+        deleted_expired_checks: u32 
+    },
+    DatabaseUserInfo { 
+        user_id: String, 
+        email: String, 
+        first_name: String, 
+        last_name: String, 
+        kyc_status: String, 
+        created_at: String 
+    },
+    DatabaseUsersList { 
+        users: Vec<DatabaseUserInfo>, 
+        total_count: u32 
+    },
+    // Observability responses
+    LogsList { 
+        logs: Vec<LogEntryInfo>, 
+        total_count: u32 
+    },
+    MetricsList { 
+        metrics: Vec<MetricInfo>, 
+        total_count: u32 
+    },
+    AlertsList { 
+        alerts: Vec<AlertInfo>, 
+        total_count: u32 
+    },
+    ObservabilityStats { 
+        total_logs: u32, 
+        total_metrics: u32, 
+        total_alerts: u32, 
+        total_requests: u32, 
+        total_errors: u32, 
+        active_connections: u32 
+    },
+    PrometheusMetrics { 
+        metrics: String 
+    },
+    AlertCreated { 
+        alert_id: String, 
+        name: String, 
+        status: String 
+    },
+    AlertResolved { 
+        alert_id: String, 
+        status: String 
+    },
+    // API Versioning responses
+    ApiVersionInfo { 
+        version: String, 
+        status: String, 
+        release_date: String 
+    },
+    SupportedVersions { 
+        versions: Vec<String>, 
+        current_version: String 
+    },
+    VersionDetails { 
+        version: String, 
+        status: String, 
+        release_date: String, 
+        deprecation_date: Option<String>, 
+        retirement_date: Option<String>, 
+        new_features: Vec<String>, 
+        breaking_changes: Vec<String>, 
+        bug_fixes: Vec<String> 
+    },
+    VersionWarning { 
+        warning_type: String, 
+        message: String, 
+        retirement_date: Option<String> 
+    },
+    Changelog { 
+        entries: Vec<ChangelogEntryInfo>, 
+        total_count: u32 
+    },
+    VersionStats { 
+        total_versions: u32, 
+        current_version: String, 
+        supported_versions: u32, 
+        deprecated_versions: u32, 
+        retired_versions: u32, 
+        total_endpoints: u32, 
+        deprecated_endpoints: u32 
+    },
+    OpenApiSpec { 
+        spec: String, 
+        version: String 
+    },
+    VersionCompatibility { 
+        version1: String, 
+        version2: String, 
+        compatible: bool, 
+        reason: Option<String> 
+    },
     Error { message: String },
 }
 
@@ -2014,8 +2484,8 @@ enum ApiResponse {
 struct BlockchainOrderRecord {
     order_id: String,
     customer_wallet: String,
-    total_amount: f64,
-    tokens_issued: f64,
+    total_amount: f64, // Оставляем f64 для совместимости с API
+    tokens_issued: f64, // Оставляем f64 для совместимости с API
     timestamp: u64,
     status: String,
 }
@@ -2037,8 +2507,8 @@ struct BalanceTransferRecord {
     from_wallet: String,
     to_wallet: String,
     to_phone: String,
-    security_tokens_transferred: f64,
-    utility_tokens_transferred: f64,
+    security_tokens_transferred: f64, // Оставляем f64 для совместимости с API
+    utility_tokens_transferred: f64, // Оставляем f64 для совместимости с API
     timestamp: u64,
     status: TransferStatus,
 }
@@ -2082,7 +2552,7 @@ struct MonitoringAlert {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct UnclaimedTokensRecord {
     check_id: String,
-    amount: f64,
+    amount: f64, // Оставляем f64 для совместимости с API
     created_timestamp: u64,
     expiry_timestamp: u64,
     is_distributed: bool,
@@ -2092,7 +2562,7 @@ struct UnclaimedTokensRecord {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct AnnualDistribution {
     year: u32,
-    total_unclaimed_tokens: f64,
+    total_unclaimed_tokens: f64, // Оставляем f64 для совместимости с API
     distribution_timestamp: u64,
     distributions: Vec<TokenDistribution>,
 }
@@ -2100,7 +2570,7 @@ struct AnnualDistribution {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct TokenDistribution {
     recipient_address: String,
-    amount: f64,
+    amount: f64, // Оставляем f64 для совместимости с API
     percentage: f64,
     recipient_type: RecipientType,
 }
@@ -2334,7 +2804,8 @@ impl ApiServer {
                                         // Map incoming ingredient fields amount -> amount_grams
                                         let name = params.get("name").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                         let description = params.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-                                        let price = params.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                        let price_gel = params.get("price").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                        let price_subunits = config::utils::gel_to_subunits(price_gel);
                                         let availability = params.get("availability").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                                         let priority_rank = params.get("priority_rank").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
                                         let cooking_time_minutes = params.get("cooking_time_minutes").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
@@ -2350,10 +2821,40 @@ impl ApiServer {
 
                                         Self::process_request(
                                             ApiRequest::AddMenuItem {
-                                                name, description, price, availability, priority_rank, cooking_time_minutes, ingredients, suggested_by
+                                                name, description, price_subunits, availability, priority_rank, cooking_time_minutes, ingredients, suggested_by
                                             },
                                             blockchain,
                                         )
+                                    } else if let Some(params) = obj.get("ProcessRelayerTransaction") {
+                                        let sale_id = params.get("sale_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                        let node_id = params.get("node_id").and_then(|v| v.as_u64()).unwrap_or(0) as u64;
+                                        let pos_id = params.get("pos_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                        let amount_gel = params.get("amount").and_then(|v| v.as_f64()).unwrap_or(0.0);
+                                        let amount_subunits = config::utils::gel_to_subunits(amount_gel);
+                                        let buyer_address = params.get("buyer_address").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                        let buyer_meta = params.get("buyer_meta").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                        let signature = params.get("signature").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                                        let timestamp = params.get("timestamp").and_then(|v| v.as_u64()).unwrap_or(0) as u64;
+                                        let items = params.get("items").and_then(|v| v.as_array()).map(|arr| {
+                                            arr.iter().filter_map(|item| {
+                                                let item_id = item.get("item_id").and_then(|v| v.as_str())?.to_string();
+                                                let quantity = item.get("quantity").and_then(|v| v.as_u64())? as u32;
+                                                let price_gel = item.get("price").and_then(|v| v.as_f64())?;
+                                                let price_subunits = config::utils::gel_to_subunits(price_gel);
+                                                Some(RelayerSaleItem { item_id, quantity, price_subunits })
+                                            }).collect::<Vec<_>>()
+                                        }).unwrap_or_default();
+
+                                        if sale_id.is_empty() || node_id == 0 || pos_id.is_empty() || buyer_address.is_empty() {
+                                            ApiResponse::Error { message: "Invalid ProcessRelayerTransaction payload".to_string() }
+                                        } else {
+                                            Self::process_request(
+                                                ApiRequest::ProcessRelayerTransaction {
+                                                    sale_id, node_id, pos_id, amount_subunits, buyer_address, buyer_meta, items, signature, timestamp
+                                                },
+                                                blockchain,
+                                            )
+                                        }
                                     } else if let Some(params) = obj.get("VoteOnMenuItem") {
                                         let voter_wallet = params.get("voter_wallet").and_then(|v| v.as_str()).unwrap_or("").to_string();
                                         let menu_item_id = params.get("menu_item_id").and_then(|v| v.as_str()).unwrap_or("").to_string();
@@ -2472,9 +2973,9 @@ impl ApiServer {
                 }
             }
             
-            ApiRequest::AddMenuItem { name, description, price, availability, priority_rank, cooking_time_minutes, ingredients, suggested_by } => {
+            ApiRequest::AddMenuItem { name, description, price_subunits, availability, priority_rank, cooking_time_minutes, ingredients, suggested_by } => {
                 match blockchain_guard.add_menu_item_with_details(
-                    name, description, price, availability, priority_rank, 
+                    name, description, price_subunits, availability, priority_rank, 
                     cooking_time_minutes, ingredients, suggested_by
                 ) {
                     Ok(()) => ApiResponse::MenuItemAdded { success: true },
@@ -2534,8 +3035,8 @@ impl ApiServer {
                 }
             }
             
-            ApiRequest::EmitTokensForInvestors { amount, investor_address } => {
-                match blockchain_guard.emit_tokens_for_investors(amount, investor_address) {
+            ApiRequest::EmitTokensForInvestors { amount_gel, investor_address } => {
+                match blockchain_guard.emit_tokens_for_investors(amount_gel, investor_address) {
                     Ok(()) => ApiResponse::TokensEmitted { success: true },
                     Err(e) => ApiResponse::Error { message: e },
                 }
@@ -2571,6 +3072,863 @@ impl ApiServer {
             ApiRequest::CheckExpiredUnclaimedTokens => {
                 let expired_checks = blockchain_guard.check_expired_unclaimed_tokens();
                 ApiResponse::ExpiredUnclaimedTokens { expired_checks }
+            }
+            
+            // Regulatory Export API endpoints
+            ApiRequest::ExportHoldersRegistry { format } => {
+                let export_format = match format.to_uppercase().as_str() {
+                    "CSV" => ExportFormat::CSV,
+                    "JSON" => ExportFormat::JSON,
+                    _ => return ApiResponse::Error { message: "Invalid format. Use CSV or JSON".to_string() }
+                };
+                
+                match export_format {
+                    ExportFormat::CSV => {
+                        let csv_data = blockchain_guard.regulatory_exporter.export_holders_csv();
+                        ApiResponse::RegulatoryExport { data: csv_data, format: "CSV".to_string() }
+                    },
+                    ExportFormat::JSON => {
+                        match blockchain_guard.regulatory_exporter.export_holders_json() {
+                            Ok(json_data) => ApiResponse::RegulatoryExport { data: json_data, format: "JSON".to_string() },
+                            Err(e) => ApiResponse::Error { message: e }
+                        }
+                    },
+                    _ => ApiResponse::Error { message: "Unsupported format".to_string() }
+                }
+            }
+            
+            ApiRequest::ExportEmissionsRegistry { format } => {
+                let export_format = match format.to_uppercase().as_str() {
+                    "CSV" => ExportFormat::CSV,
+                    "JSON" => ExportFormat::JSON,
+                    _ => return ApiResponse::Error { message: "Invalid format. Use CSV or JSON".to_string() }
+                };
+                
+                match export_format {
+                    ExportFormat::CSV => {
+                        let csv_data = blockchain_guard.regulatory_exporter.export_emissions_csv();
+                        ApiResponse::RegulatoryExport { data: csv_data, format: "CSV".to_string() }
+                    },
+                    ExportFormat::JSON => {
+                        match blockchain_guard.regulatory_exporter.export_emissions_json() {
+                            Ok(json_data) => ApiResponse::RegulatoryExport { data: json_data, format: "JSON".to_string() },
+                            Err(e) => ApiResponse::Error { message: e }
+                        }
+                    },
+                    _ => ApiResponse::Error { message: "Unsupported format".to_string() }
+                }
+            }
+            
+            ApiRequest::ExportCorporateActionsRegistry { format } => {
+                let export_format = match format.to_uppercase().as_str() {
+                    "CSV" => ExportFormat::CSV,
+                    "JSON" => ExportFormat::JSON,
+                    _ => return ApiResponse::Error { message: "Invalid format. Use CSV or JSON".to_string() }
+                };
+                
+                match export_format {
+                    ExportFormat::CSV => {
+                        let csv_data = blockchain_guard.regulatory_exporter.export_corporate_actions_csv();
+                        ApiResponse::RegulatoryExport { data: csv_data, format: "CSV".to_string() }
+                    },
+                    ExportFormat::JSON => {
+                        match blockchain_guard.regulatory_exporter.export_corporate_actions_json() {
+                            Ok(json_data) => ApiResponse::RegulatoryExport { data: json_data, format: "JSON".to_string() },
+                            Err(e) => ApiResponse::Error { message: e }
+                        }
+                    },
+                    _ => ApiResponse::Error { message: "Unsupported format".to_string() }
+                }
+            }
+            
+            ApiRequest::GenerateRegulatoryReport { format } => {
+                let export_format = match format.to_uppercase().as_str() {
+                    "CSV" => ExportFormat::CSV,
+                    "JSON" => ExportFormat::JSON,
+                    _ => return ApiResponse::Error { message: "Invalid format. Use CSV or JSON".to_string() }
+                };
+                
+                match blockchain_guard.regulatory_exporter.generate_regulatory_report(export_format) {
+                    Ok(report_data) => ApiResponse::RegulatoryExport { data: report_data, format: format.to_uppercase() },
+                    Err(e) => ApiResponse::Error { message: e }
+                }
+            }
+            
+            // Relayer Service API endpoints
+            ApiRequest::ProcessRelayerTransaction { 
+                sale_id, node_id, pos_id, amount_subunits, buyer_address, 
+                buyer_meta, items, signature, timestamp 
+            } => {
+                let request = RelayerTransactionRequest {
+                    sale_id,
+                    node_id,
+                    pos_id,
+                    amount_subunits,
+                    buyer_address,
+                    buyer_meta,
+                    items: items.into_iter().map(|item| blockchain_project::relayer_service::SaleItem {
+                        item_id: item.item_id,
+                        quantity: item.quantity,
+                        price_subunits: item.price_subunits,
+                    }).collect(),
+                    signature,
+                    timestamp,
+                };
+                
+                match blockchain_guard.relayer_service.process_transaction(request).await {
+                    Ok(response) => ApiResponse::RelayerTransactionResponse {
+                        transaction_id: response.transaction_id,
+                        status: format!("{:?}", response.status),
+                        message: response.message,
+                        blockchain_tx_hash: response.blockchain_tx_hash,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::GetRelayerTransactionStatus { transaction_id } => {
+                match blockchain_guard.relayer_service.get_transaction_status(&transaction_id).await {
+                    Some(transaction) => ApiResponse::RelayerTransactionStatus {
+                        transaction_id: transaction.id,
+                        status: format!("{:?}", transaction.status),
+                        blockchain_tx_hash: transaction.blockchain_tx_hash,
+                        error_message: transaction.error_message,
+                    },
+                    None => ApiResponse::Error { message: "Transaction not found".to_string() }
+                }
+            }
+            
+            ApiRequest::GetRelayerStatistics => {
+                let stats = blockchain_guard.relayer_service.get_statistics().await;
+                ApiResponse::RelayerStatistics {
+                    total_processed: stats.total_processed,
+                    total_successful: stats.total_successful,
+                    total_failed: stats.total_failed,
+                    total_retries: stats.total_retries,
+                    average_processing_time_ms: stats.average_processing_time_ms,
+                }
+            }
+            
+            // HD Wallet API endpoints
+            ApiRequest::GenerateNodeWallet { node_id, wallet_type } => {
+                let wallet_type_enum = match wallet_type.to_uppercase().as_str() {
+                    "MASTER" => WalletType::Master,
+                    "FRANCHISE" => WalletType::Franchise,
+                    _ => return ApiResponse::Error { message: "Invalid wallet type. Use MASTER or FRANCHISE".to_string() }
+                };
+                
+                match blockchain_guard.hd_wallet_manager.generate_node_wallet(node_id, wallet_type_enum) {
+                    Ok(wallet) => ApiResponse::WalletGenerated {
+                        wallet_id: wallet.wallet_id,
+                        address: wallet.address,
+                        derivation_path: wallet.derivation_path,
+                        public_key: wallet.public_key,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::GenerateCustomerWallet { customer_id } => {
+                match blockchain_guard.hd_wallet_manager.generate_customer_wallet(customer_id) {
+                    Ok(wallet) => ApiResponse::WalletGenerated {
+                        wallet_id: wallet.wallet_id,
+                        address: wallet.address,
+                        derivation_path: wallet.derivation_path,
+                        public_key: wallet.public_key,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::GenerateCheckWallet { sale_id, node_id, amount_subunits, items } => {
+                let check_items: Vec<blockchain_project::hd_wallet::CheckItem> = items.into_iter().map(|item| {
+                    blockchain_project::hd_wallet::CheckItem {
+                        item_id: item.item_id,
+                        name: item.name,
+                        quantity: item.quantity,
+                        price_subunits: item.price_subunits,
+                    }
+                }).collect();
+                
+                match blockchain_guard.hd_wallet_manager.generate_check_wallet(sale_id, node_id, amount_subunits, check_items) {
+                    Ok(check_wallet) => ApiResponse::CheckWalletGenerated {
+                        check_id: check_wallet.check_id,
+                        wallet_address: check_wallet.wallet.address,
+                        qr_code: check_wallet.qr_code,
+                        activation_code: check_wallet.activation_code,
+                        expires_at: check_wallet.expires_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::ActivateCheckWallet { check_id, activation_code } => {
+                match blockchain_guard.hd_wallet_manager.activate_check_wallet(&check_id, &activation_code) {
+                    Ok(check_wallet) => ApiResponse::CheckWalletActivated {
+                        check_id: check_wallet.check_id,
+                        wallet_address: check_wallet.wallet.address,
+                        activated_at: check_wallet.activated_at.unwrap().format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::GetWalletInfo { wallet_id } => {
+                match blockchain_guard.hd_wallet_manager.get_wallet(&wallet_id) {
+                    Some(wallet) => ApiResponse::WalletInfo {
+                        wallet_id: wallet.wallet_id.clone(),
+                        wallet_type: format!("{:?}", wallet.wallet_type),
+                        address: wallet.address.clone(),
+                        status: format!("{:?}", wallet.status),
+                        created_at: wallet.created_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    },
+                    None => ApiResponse::Error { message: "Wallet not found".to_string() }
+                }
+            }
+            
+            ApiRequest::GetCheckWalletInfo { check_id } => {
+                match blockchain_guard.hd_wallet_manager.get_check_wallet(&check_id) {
+                    Some(check_wallet) => ApiResponse::CheckWalletInfo {
+                        check_id: check_wallet.check_id.clone(),
+                        wallet_address: check_wallet.wallet.address.clone(),
+                        amount_subunits: check_wallet.amount_subunits,
+                        is_activated: check_wallet.is_activated,
+                        expires_at: check_wallet.expires_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    },
+                    None => ApiResponse::Error { message: "Check wallet not found".to_string() }
+                }
+            }
+            
+            ApiRequest::GetWalletStatistics => {
+                match blockchain_guard.hd_wallet_manager.get_wallet_statistics() {
+                    Ok(stats) => ApiResponse::WalletStatistics {
+                        total_wallets: stats.total_wallets,
+                        total_check_wallets: stats.total_check_wallets,
+                        active_wallets: stats.active_wallets,
+                        inactive_wallets: stats.inactive_wallets,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            // KYC/AML API endpoints
+            ApiRequest::RegisterUser { 
+                email, phone, first_name, last_name, date_of_birth, nationality, address 
+            } => {
+                let date_of_birth_parsed = if let Some(dob_str) = date_of_birth {
+                    chrono::DateTime::parse_from_rfc3339(&dob_str).ok().map(|dt| dt.with_timezone(&Utc))
+                } else {
+                    None
+                };
+                
+                let address_parsed = address.map(|addr| Address {
+                    street: addr.street,
+                    city: addr.city,
+                    state: addr.state,
+                    postal_code: addr.postal_code,
+                    country: addr.country,
+                });
+                
+                let user_data = UserRegistrationData {
+                    email,
+                    phone,
+                    first_name,
+                    last_name,
+                    date_of_birth: date_of_birth_parsed,
+                    nationality,
+                    address: address_parsed,
+                };
+                
+                match blockchain_guard.kyc_aml_manager.register_user(user_data) {
+                    Ok(user_id) => {
+                        if let Some(user) = blockchain_guard.kyc_aml_manager.get_user(&user_id) {
+                            ApiResponse::UserRegistered {
+                                user_id,
+                                email: user.email.clone(),
+                                kyc_status: format!("{:?}", user.kyc_status),
+                            }
+                        } else {
+                            ApiResponse::Error { message: "User not found after registration".to_string() }
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::StartKYCProcess { user_id, kyc_level } => {
+                let kyc_level_enum = match kyc_level.to_uppercase().as_str() {
+                    "BASIC" => KYCLevel::Basic,
+                    "ENHANCED" => KYCLevel::Enhanced,
+                    "PREMIUM" => KYCLevel::Premium,
+                    _ => return ApiResponse::Error { message: "Invalid KYC level. Use BASIC, ENHANCED, or PREMIUM".to_string() }
+                };
+                
+                match blockchain_guard.kyc_aml_manager.start_kyc_process(&user_id, kyc_level_enum) {
+                    Ok(()) => {
+                        if let Some(user) = blockchain_guard.kyc_aml_manager.get_user(&user_id) {
+                            ApiResponse::KYCProcessStarted {
+                                user_id,
+                                kyc_level,
+                                status: format!("{:?}", user.kyc_status),
+                            }
+                        } else {
+                            ApiResponse::Error { message: "User not found".to_string() }
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::UploadDocument { user_id, document_type, file_hash, file_path } => {
+                let document_type_enum = match document_type.to_uppercase().as_str() {
+                    "PASSPORT" => DocumentType::Passport,
+                    "IDCARD" => DocumentType::IdCard,
+                    "DRIVERLICENSE" => DocumentType::DriverLicense,
+                    "UTILITYBILL" => DocumentType::UtilityBill,
+                    "BANKSTATEMENT" => DocumentType::BankStatement,
+                    "PROOFOFADDRESS" => DocumentType::ProofOfAddress,
+                    _ => return ApiResponse::Error { message: "Invalid document type".to_string() }
+                };
+                
+                match blockchain_guard.kyc_aml_manager.upload_document(&user_id, document_type_enum, file_hash, file_path) {
+                    Ok(document_id) => ApiResponse::DocumentUploaded {
+                        document_id,
+                        user_id,
+                        document_type,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::VerifyDocument { user_id, document_id, verified_by, approved, rejection_reason } => {
+                match blockchain_guard.kyc_aml_manager.verify_document(&user_id, &document_id, &verified_by, approved, rejection_reason) {
+                    Ok(()) => ApiResponse::DocumentVerified {
+                        document_id,
+                        user_id,
+                        approved,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::CompleteKYCProcess { user_id, verified_by } => {
+                match blockchain_guard.kyc_aml_manager.complete_kyc_process(&user_id, &verified_by) {
+                    Ok(()) => {
+                        if let Some(user) = blockchain_guard.kyc_aml_manager.get_user(&user_id) {
+                            ApiResponse::KYCProcessCompleted {
+                                user_id,
+                                kyc_status: format!("{:?}", user.kyc_status),
+                                risk_score: user.risk_score,
+                            }
+                        } else {
+                            ApiResponse::Error { message: "User not found".to_string() }
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::AssignRole { user_id, role, assigned_by, expires_at } => {
+                let role_enum = match role.to_uppercase().as_str() {
+                    "SUPERADMIN" => UserRole::SuperAdmin,
+                    "ADMIN" => UserRole::Admin,
+                    "COMPLIANCE" => UserRole::Compliance,
+                    "MASTEROWNER" => UserRole::MasterOwner,
+                    "FRANCHISEOWNER" => UserRole::FranchiseOwner,
+                    "POSOPERATOR" => UserRole::POSOperator,
+                    "CASHIER" => UserRole::Cashier,
+                    "CUSTOMER" => UserRole::Customer,
+                    "INVESTOR" => UserRole::Investor,
+                    "SYSTEM" => UserRole::System,
+                    "AUDITOR" => UserRole::Auditor,
+                    _ => return ApiResponse::Error { message: "Invalid role".to_string() }
+                };
+                
+                let expires_at_parsed = if let Some(exp_str) = expires_at {
+                    chrono::DateTime::parse_from_rfc3339(&exp_str).ok().map(|dt| dt.with_timezone(&Utc))
+                } else {
+                    None
+                };
+                
+                match blockchain_guard.kyc_aml_manager.assign_role(&user_id, role_enum, assigned_by.clone(), expires_at_parsed) {
+                    Ok(()) => ApiResponse::RoleAssigned {
+                        user_id,
+                        role,
+                        assigned_by,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::CheckPermission { user_id, permission } => {
+                let permission_enum = match permission.to_uppercase().as_str() {
+                    "MANAGEUSERS" => Permission::ManageUsers,
+                    "MANAGEROLES" => Permission::ManageRoles,
+                    "VIEWAUDITLOGS" => Permission::ViewAuditLogs,
+                    "MANAGESYSTEM" => Permission::ManageSystem,
+                    "VERIFYKYC" => Permission::VerifyKYC,
+                    "VIEWKYCDATA" => Permission::ViewKYCData,
+                    "MANAGECOMPLIANCE" => Permission::ManageCompliance,
+                    "GENERATEREPORTS" => Permission::GenerateReports,
+                    "PROCESSTRANSACTIONS" => Permission::ProcessTransactions,
+                    "MANAGENODES" => Permission::ManageNodes,
+                    "VIEWFINANCIALS" => Permission::ViewFinancials,
+                    "MANAGEMENU" => Permission::ManageMenu,
+                    "CREATEORDERS" => Permission::CreateOrders,
+                    "VIEWOWNDATA" => Permission::ViewOwnData,
+                    "TRANSFERTOKENS" => Permission::TransferTokens,
+                    "VOTEONPROPOSALS" => Permission::VoteOnProposals,
+                    _ => return ApiResponse::Error { message: "Invalid permission".to_string() }
+                };
+                
+                let has_permission = blockchain_guard.kyc_aml_manager.has_permission(&user_id, &permission_enum);
+                
+                ApiResponse::PermissionCheck {
+                    user_id,
+                    permission,
+                    has_permission,
+                }
+            }
+            
+            ApiRequest::GetUserInfo { user_id } => {
+                match blockchain_guard.kyc_aml_manager.get_user(&user_id) {
+                    Some(user) => ApiResponse::UserInfo {
+                        user_id: user.user_id.clone(),
+                        email: user.email.clone(),
+                        first_name: user.first_name.clone(),
+                        last_name: user.last_name.clone(),
+                        kyc_status: format!("{:?}", user.kyc_status),
+                        kyc_level: format!("{:?}", user.kyc_level),
+                        risk_score: user.risk_score,
+                    },
+                    None => ApiResponse::Error { message: "User not found".to_string() }
+                }
+            }
+            
+            ApiRequest::GetKYCStatistics => {
+                match blockchain_guard.kyc_aml_manager.get_kyc_statistics() {
+                    Ok(stats) => ApiResponse::KYCStatistics {
+                        total_users: stats.total_users,
+                        total_documents: stats.total_documents,
+                        verified: stats.verified,
+                        pending: stats.pending,
+                        rejected: stats.rejected,
+                        high_risk: stats.high_risk,
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            // Database API endpoints
+            ApiRequest::InitializeDatabase { host, port, database, username, password } => {
+                let config = DatabaseConfig {
+                    host,
+                    port,
+                    database,
+                    username,
+                    password,
+                    max_connections: 10,
+                    connection_timeout: 30,
+                };
+                
+                match DatabaseManager::new(config.clone()).await {
+                    Ok(db_manager) => {
+                        blockchain_guard.database_manager = Some(db_manager);
+                        ApiResponse::DatabaseInitialized {
+                            message: "Database initialized successfully".to_string(),
+                            config: format!("{}:{}@{}:{}", config.username, "***", config.host, config.port),
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e.to_string() }
+                }
+            }
+            
+            ApiRequest::GetDatabaseStats => {
+                match &blockchain_guard.database_manager {
+                    Some(db_manager) => {
+                        match db_manager.get_database_stats().await {
+                            Ok(stats) => ApiResponse::DatabaseStats {
+                                total_users: stats.total_users,
+                                total_documents: stats.total_documents,
+                                total_wallets: stats.total_wallets,
+                                total_transactions: stats.total_transactions,
+                                total_audit_logs: stats.total_audit_logs,
+                            },
+                            Err(e) => ApiResponse::Error { message: e.to_string() }
+                        }
+                    },
+                    None => ApiResponse::Error { message: "Database not initialized".to_string() }
+                }
+            }
+            
+            ApiRequest::CleanupOldData { days } => {
+                match &blockchain_guard.database_manager {
+                    Some(db_manager) => {
+                        match db_manager.cleanup_old_data(days).await {
+                            Ok(stats) => ApiResponse::CleanupCompleted {
+                                deleted_audit_logs: stats.deleted_audit_logs,
+                                deleted_expired_checks: stats.deleted_expired_checks,
+                            },
+                            Err(e) => ApiResponse::Error { message: e.to_string() }
+                        }
+                    },
+                    None => ApiResponse::Error { message: "Database not initialized".to_string() }
+                }
+            }
+            
+            ApiRequest::GetUserFromDatabase { user_id } => {
+                match &blockchain_guard.database_manager {
+                    Some(db_manager) => {
+                        match db_manager.get_user(&user_id).await {
+                            Ok(Some(user)) => ApiResponse::DatabaseUserInfo {
+                                user_id: user.user_id,
+                                email: user.email,
+                                first_name: user.first_name,
+                                last_name: user.last_name,
+                                kyc_status: user.kyc_status,
+                                created_at: user.created_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                            },
+                            Ok(None) => ApiResponse::Error { message: "User not found".to_string() },
+                            Err(e) => ApiResponse::Error { message: e.to_string() }
+                        }
+                    },
+                    None => ApiResponse::Error { message: "Database not initialized".to_string() }
+                }
+            }
+            
+            ApiRequest::GetAllUsersFromDatabase { limit, offset } => {
+                match &blockchain_guard.database_manager {
+                    Some(db_manager) => {
+                        match db_manager.get_all_users(limit, offset).await {
+                            Ok(users) => {
+                                let db_users: Vec<DatabaseUserInfo> = users.into_iter().map(|user| {
+                                    DatabaseUserInfo {
+                                        user_id: user.user_id,
+                                        email: user.email,
+                                        first_name: user.first_name,
+                                        last_name: user.last_name,
+                                        kyc_status: user.kyc_status,
+                                        created_at: user.created_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                                    }
+                                }).collect();
+                                
+                                ApiResponse::DatabaseUsersList {
+                                    users: db_users,
+                                    total_count: users.len() as u32,
+                                }
+                            },
+                            Err(e) => ApiResponse::Error { message: e.to_string() }
+                        }
+                    },
+                    None => ApiResponse::Error { message: "Database not initialized".to_string() }
+                }
+            }
+            
+            // Observability API endpoints
+            ApiRequest::GetLogs { level, limit } => {
+                let log_level = if let Some(level_str) = level {
+                    match level_str.to_uppercase().as_str() {
+                        "TRACE" => Some(LogLevel::Trace),
+                        "DEBUG" => Some(LogLevel::Debug),
+                        "INFO" => Some(LogLevel::Info),
+                        "WARN" => Some(LogLevel::Warn),
+                        "ERROR" => Some(LogLevel::Error),
+                        "FATAL" => Some(LogLevel::Fatal),
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                
+                let logs = blockchain_guard.observability_manager.get_logs(log_level, limit.map(|l| l as usize)).await;
+                let log_infos: Vec<LogEntryInfo> = logs.into_iter().map(|log| {
+                    LogEntryInfo {
+                        timestamp: log.timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        level: format!("{:?}", log.level),
+                        message: log.message,
+                        module: log.module,
+                        thread_id: log.thread_id,
+                        metadata: log.metadata,
+                    }
+                }).collect();
+                
+                ApiResponse::LogsList {
+                    logs: log_infos.clone(),
+                    total_count: log_infos.len() as u32,
+                }
+            }
+            
+            ApiRequest::GetMetrics { metric_type, limit } => {
+                let metric_type_enum = if let Some(type_str) = metric_type {
+                    match type_str.to_uppercase().as_str() {
+                        "COUNTER" => Some(MetricType::Counter),
+                        "GAUGE" => Some(MetricType::Gauge),
+                        "HISTOGRAM" => Some(MetricType::Histogram),
+                        "SUMMARY" => Some(MetricType::Summary),
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                
+                let metrics = blockchain_guard.observability_manager.get_metrics(metric_type_enum, limit.map(|l| l as usize)).await;
+                let metric_infos: Vec<MetricInfo> = metrics.into_iter().map(|metric| {
+                    MetricInfo {
+                        name: metric.name,
+                        value: metric.value,
+                        timestamp: metric.timestamp.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        metric_type: format!("{:?}", metric.metric_type),
+                        labels: metric.labels,
+                    }
+                }).collect();
+                
+                ApiResponse::MetricsList {
+                    metrics: metric_infos.clone(),
+                    total_count: metric_infos.len() as u32,
+                }
+            }
+            
+            ApiRequest::GetAlerts { status, severity } => {
+                let alert_status = if let Some(status_str) = status {
+                    match status_str.to_uppercase().as_str() {
+                        "FIRING" => Some(AlertStatus::Firing),
+                        "RESOLVED" => Some(AlertStatus::Resolved),
+                        "SUPPRESSED" => Some(AlertStatus::Suppressed),
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                
+                let alert_severity = if let Some(severity_str) = severity {
+                    match severity_str.to_uppercase().as_str() {
+                        "INFO" => Some(AlertSeverity::Info),
+                        "WARNING" => Some(AlertSeverity::Warning),
+                        "CRITICAL" => Some(AlertSeverity::Critical),
+                        "EMERGENCY" => Some(AlertSeverity::Emergency),
+                        _ => None,
+                    }
+                } else {
+                    None
+                };
+                
+                let alerts = blockchain_guard.observability_manager.get_alerts(alert_status, alert_severity).await;
+                let alert_infos: Vec<AlertInfo> = alerts.into_iter().map(|alert| {
+                    AlertInfo {
+                        alert_id: alert.alert_id,
+                        name: alert.name,
+                        description: alert.description,
+                        severity: format!("{:?}", alert.severity),
+                        status: format!("{:?}", alert.status),
+                        created_at: alert.created_at.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        labels: alert.labels,
+                    }
+                }).collect();
+                
+                ApiResponse::AlertsList {
+                    alerts: alert_infos.clone(),
+                    total_count: alert_infos.len() as u32,
+                }
+            }
+            
+            ApiRequest::GetObservabilityStats => {
+                let stats = blockchain_guard.observability_manager.get_statistics().await;
+                ApiResponse::ObservabilityStats {
+                    total_logs: stats.total_logs,
+                    total_metrics: stats.total_metrics,
+                    total_alerts: stats.total_alerts,
+                    total_requests: stats.total_requests,
+                    total_errors: stats.total_errors,
+                    active_connections: stats.active_connections,
+                }
+            }
+            
+            ApiRequest::GeneratePrometheusMetrics => {
+                let metrics = blockchain_guard.observability_manager.generate_prometheus_metrics().await;
+                ApiResponse::PrometheusMetrics { metrics }
+            }
+            
+            ApiRequest::CreateAlert { alert_id, name, description, severity } => {
+                let alert_severity = match severity.to_uppercase().as_str() {
+                    "INFO" => AlertSeverity::Info,
+                    "WARNING" => AlertSeverity::Warning,
+                    "CRITICAL" => AlertSeverity::Critical,
+                    "EMERGENCY" => AlertSeverity::Emergency,
+                    _ => return ApiResponse::Error { message: "Invalid severity level".to_string() }
+                };
+                
+                blockchain_guard.observability_manager.create_alert(&alert_id, &name, &description, alert_severity, None).await;
+                
+                ApiResponse::AlertCreated {
+                    alert_id,
+                    name,
+                    status: "Firing".to_string(),
+                }
+            }
+            
+            ApiRequest::ResolveAlert { alert_id } => {
+                blockchain_guard.observability_manager.resolve_alert(&alert_id).await;
+                
+                ApiResponse::AlertResolved {
+                    alert_id,
+                    status: "Resolved".to_string(),
+                }
+            }
+            
+            // API Versioning endpoints
+            ApiRequest::GetApiVersion => {
+                let current_version = blockchain_guard.api_version_manager.get_current_version();
+                let version_info = blockchain_guard.api_version_manager.get_version_info(current_version);
+                
+                if let Some(info) = version_info {
+                    ApiResponse::ApiVersionInfo {
+                        version: current_version.to_string(),
+                        status: format!("{:?}", info.status),
+                        release_date: info.release_date.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                    }
+                } else {
+                    ApiResponse::Error { message: "Version info not found".to_string() }
+                }
+            }
+            
+            ApiRequest::GetSupportedVersions => {
+                let supported_versions = blockchain_guard.api_version_manager.get_supported_versions();
+                let current_version = blockchain_guard.api_version_manager.get_current_version();
+                
+                let version_strings: Vec<String> = supported_versions.iter().map(|v| v.to_string()).collect();
+                
+                ApiResponse::SupportedVersions {
+                    versions: version_strings,
+                    current_version: current_version.to_string(),
+                }
+            }
+            
+            ApiRequest::GetVersionInfo { version } => {
+                match ApiVersion::from_string(&version) {
+                    Ok(api_version) => {
+                        if let Some(info) = blockchain_guard.api_version_manager.get_version_info(&api_version) {
+                            ApiResponse::VersionDetails {
+                                version: api_version.to_string(),
+                                status: format!("{:?}", info.status),
+                                release_date: info.release_date.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                                deprecation_date: info.deprecation_date.map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string()),
+                                retirement_date: info.retirement_date.map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string()),
+                                new_features: info.new_features.clone(),
+                                breaking_changes: info.breaking_changes.clone(),
+                                bug_fixes: info.bug_fixes.clone(),
+                            }
+                        } else {
+                            ApiResponse::Error { message: "Version info not found".to_string() }
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e }
+                }
+            }
+            
+            ApiRequest::GetVersionWarning { version } => {
+                match ApiVersion::from_string(&version) {
+                    Ok(api_version) => {
+                        if let Some(warning) = blockchain_guard.api_version_manager.get_version_warning(&api_version) {
+                            ApiResponse::VersionWarning {
+                                warning_type: format!("{:?}", warning.warning_type),
+                                message: warning.message,
+                                retirement_date: warning.retirement_date.map(|d| d.format("%Y-%m-%d %H:%M:%S UTC").to_string()),
+                            }
+                        } else {
+                            ApiResponse::Error { message: "No warning for this version".to_string() }
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e }
+                }
+            }
+            
+            ApiRequest::GetChangelog { version } => {
+                let api_version = if let Some(version_str) = version {
+                    match ApiVersion::from_string(&version_str) {
+                        Ok(v) => Some(v),
+                        Err(_) => None,
+                    }
+                } else {
+                    None
+                };
+                
+                let changelog_entries = blockchain_guard.api_version_manager.get_changelog(api_version.as_ref());
+                let entry_infos: Vec<ChangelogEntryInfo> = changelog_entries.into_iter().map(|entry| {
+                    let changes: Vec<ChangeEntryInfo> = entry.changes.iter().map(|change| {
+                        ChangeEntryInfo {
+                            change_type: format!("{:?}", change.change_type),
+                            description: change.description.clone(),
+                            impact: format!("{:?}", change.impact),
+                            affected_endpoints: change.affected_endpoints.clone(),
+                        }
+                    }).collect();
+                    
+                    ChangelogEntryInfo {
+                        version: entry.version.to_string(),
+                        date: entry.date.format("%Y-%m-%d %H:%M:%S UTC").to_string(),
+                        changes,
+                    }
+                }).collect();
+                
+                ApiResponse::Changelog {
+                    entries: entry_infos.clone(),
+                    total_count: entry_infos.len() as u32,
+                }
+            }
+            
+            ApiRequest::GetVersionStatistics => {
+                let stats = blockchain_guard.api_version_manager.get_version_statistics();
+                ApiResponse::VersionStats {
+                    total_versions: stats.total_versions,
+                    current_version: stats.current_version,
+                    supported_versions: stats.supported_versions,
+                    deprecated_versions: stats.deprecated_versions,
+                    retired_versions: stats.retired_versions,
+                    total_endpoints: stats.total_endpoints,
+                    deprecated_endpoints: stats.deprecated_endpoints,
+                }
+            }
+            
+            ApiRequest::GenerateOpenApiSpec { version } => {
+                match ApiVersion::from_string(&version) {
+                    Ok(api_version) => {
+                        match blockchain_guard.api_version_manager.generate_openapi_spec(&api_version) {
+                            Ok(spec) => {
+                                match serde_json::to_string_pretty(&spec) {
+                                    Ok(spec_json) => ApiResponse::OpenApiSpec {
+                                        spec: spec_json,
+                                        version: api_version.to_string(),
+                                    },
+                                    Err(e) => ApiResponse::Error { message: format!("Failed to serialize OpenAPI spec: {}", e) }
+                                }
+                            },
+                            Err(e) => ApiResponse::Error { message: e }
+                        }
+                    },
+                    Err(e) => ApiResponse::Error { message: e }
+                }
+            }
+            
+            ApiRequest::CheckVersionCompatibility { version1, version2 } => {
+                match (ApiVersion::from_string(&version1), ApiVersion::from_string(&version2)) {
+                    (Ok(v1), Ok(v2)) => {
+                        let compatible = blockchain_guard.api_version_manager.are_versions_compatible(&v1, &v2);
+                        let reason = if !compatible {
+                            Some("Major versions must match for compatibility".to_string())
+                        } else {
+                            None
+                        };
+                        
+                        ApiResponse::VersionCompatibility {
+                            version1: v1.to_string(),
+                            version2: v2.to_string(),
+                            compatible,
+                            reason,
+                        }
+                    },
+                    (Err(e), _) => ApiResponse::Error { message: format!("Invalid version1: {}", e) },
+                    (_, Err(e)) => ApiResponse::Error { message: format!("Invalid version2: {}", e) },
+                }
             }
         }
     }
@@ -2935,7 +4293,7 @@ impl UI {
             
             println!("{}. Order ID: {}", i + 1, order.id);
             println!("   Customer: {}", order.customer_wallet);
-            println!("   Amount: ${:.2}", order.total_amount);
+            println!("   Amount: {}", config_utils::format_gel(order.total_amount_subunits));
             println!("   Status: {}", status_str);
             println!("   Delivery Time: {} minutes", order.delivery_time_minutes);
             println!("   Items: {} items", order.items.len());
@@ -2972,8 +4330,8 @@ impl UI {
         }
         
         for (i, order) in pending_orders.iter().enumerate() {
-            println!("{}. Order ID: {} - Customer: {} - Amount: ${:.2}", 
-                i + 1, order.id, order.customer_wallet, order.total_amount);
+            println!("{}. Order ID: {} - Customer: {} - Amount: {}", 
+                i + 1, order.id, order.customer_wallet, config_utils::format_gel(order.total_amount_subunits));
         }
         
         // Simulate confirming first order
@@ -3039,7 +4397,7 @@ impl UI {
                 
                 for (i, check) in holder.checks.iter().enumerate() {
                     println!("{}. Check ID: {}", i + 1, check.check_id);
-                    println!("   Amount: ${:.2}", check.amount);
+                    println!("   Amount: {}", config_utils::format_gel(check.amount_subunits));
                     println!("   Food Items: {}", check.food_items.join(", "));
                     println!("   Activation Code: {}", check.activation_code);
                     println!("   Status: {}", if check.is_activated { "Activated" } else { "Not Activated" });
@@ -3204,7 +4562,7 @@ impl UI {
 
 #[tokio::main]
 async fn main() {
-    println!("🍔 Fast Food Truck Blockchain with Security Tokens & Voting 🍔\n");
+    println!("🍔 Fast Food Truck Blockchain with Security Tokens & 1:1 Utility Tokens 🍔\n");
     
     // Initialize blockchain with main owner
     let main_owner = "MainOwner_Alice".to_string();
@@ -3352,7 +4710,7 @@ async fn main() {
     
     for (customer, truck, amount, food_items) in purchases {
         let check = blockchain.process_purchase(customer, truck, amount, food_items);
-        println!("Generated check: {} for ${:.2}", check.check_id, check.amount);
+        println!("Generated check: {} for {}", check.check_id, config_utils::format_gel(check.amount_subunits));
     }
     
     // Создаем пример заказа
@@ -3363,7 +4721,7 @@ async fn main() {
     ];
     
     match blockchain.create_order("Customer_John".to_string(), order_items, 30) {
-        Ok(order) => println!("Created order: {} for ${:.2}", order.id, order.total_amount),
+        Ok(order) => println!("Created order: {} for {}", order.id, config_utils::format_gel(order.total_amount_subunits)),
         Err(e) => println!("Failed to create order: {}", e),
     }
     

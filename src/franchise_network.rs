@@ -36,7 +36,7 @@ pub struct Sale {
     pub sale_id: String,
     pub node_id: u64,
     pub timestamp: u64,
-    pub price_gel: f64,
+    pub price_subunits: u128, // Цена в subunits (1/100 GEL)
     pub check_address: String,
     pub buyer_meta: String,
     pub pos_id: String,
@@ -47,7 +47,7 @@ pub struct Sale {
 pub struct SaleItem {
     pub item_id: String,
     pub quantity: u32,
-    pub price: f64,
+    pub price_subunits: u128, // Цена в subunits (1/100 GEL)
 }
 
 // Структура эмиссии токенов
@@ -163,7 +163,7 @@ impl FranchiseNetwork {
     }
 
     // Запись продажи и эмиссия токенов
-    pub fn record_sale(&mut self, node_id: u64, sale_id: String, price_gel: f64, 
+    pub fn record_sale(&mut self, node_id: u64, sale_id: String, price_subunits: u128, 
                       buyer_meta: String, pos_id: String, items: Vec<SaleItem>) -> Result<TokenMinting, String> {
         
         // Проверяем, что нода существует и активна
@@ -187,7 +187,7 @@ impl FranchiseNetwork {
             sale_id: sale_id.clone(),
             node_id,
             timestamp: chrono::Utc::now().timestamp() as u64,
-            price_gel,
+            price_subunits,
             check_address: check_address.clone(),
             buyer_meta,
             pos_id,

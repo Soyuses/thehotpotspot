@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hot Pot Spot - Relayer Service Test Interface</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #ff6b6b;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .response.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .transaction-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .transaction-id {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .transaction-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-processing { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-failed { background: #f8d7da; color: #721c24; }
+        .status-rejected { background: #f5c6cb; color: #721c24; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍽️ Relayer Service Test Interface</h1>
+            <p>Test and monitor blockchain transaction processing</p>
+        </div>
+        
+        <div class="content">
+            <!-- Process Transaction Section -->
+            <div class="section">
+                <h2>📤 Process Relayer Transaction</h2>
+                <form id="relayerForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="saleId">Sale ID:</label>
+                            <input type="text" id="saleId" value="SALE_001" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="nodeId">Node ID:</label>
+                            <input type="number" id="nodeId" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="posId">POS ID:</label>
+                            <input type="text" id="posId" value="POS_001" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="amount">Amount (GEL):</label>
+                            <input type="number" id="amount" step="0.01" value="5.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="buyerAddress">Buyer Address:</label>
+                            <input type="text" id="buyerAddress" value="0x1234567890abcdef" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="buyerMeta">Buyer Meta:</label>
+                        <input type="text" id="buyerMeta" value="Customer data">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signature">Signature:</label>
+                        <input type="text" id="signature" value="signature_data" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="items">Items (JSON):</label>
+                        <textarea id="items" rows="4">[
+  {
+    "item_id": "ITEM_001",
+    "quantity": 1,
+    "price": 5.00
+  }
+]</textarea>
+                    </div>
+                    
+                    <button type="submit">🚀 Process Transaction</button>
+                    <button type="button" onclick="generateRandomTransaction()">🎲 Generate Random</button>
+                </form>
+                
+                <div id="relayerResponse" class="response" style="display: none;"></div>
+            </div>
+            
+            <!-- Transaction Status Section -->
+            <div class="section">
+                <h2>🔍 Check Transaction Status</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="transactionId">Transaction ID:</label>
+                        <input type="text" id="transactionId" placeholder="Enter transaction ID">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" onclick="checkTransactionStatus()">🔍 Check Status</button>
+                    </div>
+                </div>
+                
+                <div id="statusResponse" class="response" style="display: none;"></div>
+            </div>
+            
+            <!-- Statistics Section -->
+            <div class="section">
+                <h2>📊 Relayer Statistics</h2>
+                <button type="button" onclick="getRelayerStatistics()">📈 Get Statistics</button>
+                
+                <div id="statsResponse" class="response" style="display: none;"></div>
+                <div id="statsGrid" class="stats-grid" style="display: none;"></div>
+            </div>
+            
+            <!-- Recent Transactions Section -->
+            <div class="section">
+                <h2>📋 Recent Transactions</h2>
+                <button type="button" onclick="loadRecentTransactions()">🔄 Refresh</button>
+                
+                <div id="recentTransactions"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8080';
+        
+        // Process Relayer Transaction
+        document.getElementById('relayerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                sale_id: document.getElementById('saleId').value,
+                node_id: parseInt(document.getElementById('nodeId').value),
+                pos_id: document.getElementById('posId').value,
+                amount: parseFloat(document.getElementById('amount').value),
+                buyer_address: document.getElementById('buyerAddress').value,
+                buyer_meta: document.getElementById('buyerMeta').value,
+                signature: document.getElementById('signature').value,
+                timestamp: Math.floor(Date.now() / 1000),
+                items: JSON.parse(document.getElementById('items').value)
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ProcessRelayerTransaction: formData
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('relayerResponse', result, 'success');
+                
+                // Auto-check status after a delay
+                if (result.RelayerTransactionResponse) {
+                    setTimeout(() => {
+                        document.getElementById('transactionId').value = result.RelayerTransactionResponse.transaction_id;
+                        checkTransactionStatus();
+                    }, 2000);
+                }
+            } catch (error) {
+                showResponse('relayerResponse', { error: error.message }, 'error');
+            }
+        });
+        
+        // Check Transaction Status
+        async function checkTransactionStatus() {
+            const transactionId = document.getElementById('transactionId').value;
+            if (!transactionId) {
+                showResponse('statusResponse', { error: 'Please enter a transaction ID' }, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        GetRelayerTransactionStatus: {
+                            transaction_id: transactionId
+                        }
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('statusResponse', result, 'info');
+            } catch (error) {
+                showResponse('statusResponse', { error: error.message }, 'error');
+            }
+        }
+        
+        // Get Relayer Statistics
+        async function getRelayerStatistics() {
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        GetRelayerStatistics: {}
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('statsResponse', result, 'info');
+                
+                if (result.RelayerStatistics) {
+                    showStatisticsGrid(result.RelayerStatistics);
+                }
+            } catch (error) {
+                showResponse('statsResponse', { error: error.message }, 'error');
+            }
+        }
+        
+        // Show Statistics Grid
+        function showStatisticsGrid(stats) {
+            const grid = document.getElementById('statsGrid');
+            grid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_processed}</div>
+                    <div class="stat-label">Total Processed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_successful}</div>
+                    <div class="stat-label">Successful</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_failed}</div>
+                    <div class="stat-label">Failed</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_retries}</div>
+                    <div class="stat-label">Total Retries</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.average_processing_time_ms}ms</div>
+                    <div class="stat-label">Avg Processing Time</div>
+                </div>
+            `;
+            grid.style.display = 'grid';
+        }
+        
+        // Load Recent Transactions (simulated)
+        async function loadRecentTransactions() {
+            const container = document.getElementById('recentTransactions');
+            container.innerHTML = '<p>Loading recent transactions...</p>';
+            
+            // Simulate loading recent transactions
+            setTimeout(() => {
+                container.innerHTML = `
+                    <div class="transaction-item">
+                        <div class="transaction-id">relayer_abc123</div>
+                        <span class="transaction-status status-completed">Completed</span>
+                        <div>Sale ID: SALE_001 | Amount: 5.00 GEL</div>
+                        <div>Blockchain TX: 0x1234...5678</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-id">relayer_def456</div>
+                        <span class="transaction-status status-processing">Processing</span>
+                        <div>Sale ID: SALE_002 | Amount: 3.50 GEL</div>
+                        <div>Processing...</div>
+                    </div>
+                    <div class="transaction-item">
+                        <div class="transaction-id">relayer_ghi789</div>
+                        <span class="transaction-status status-failed">Failed</span>
+                        <div>Sale ID: SALE_003 | Amount: 7.25 GEL</div>
+                        <div>Error: Invalid signature</div>
+                    </div>
+                `;
+            }, 1000);
+        }
+        
+        // Generate Random Transaction
+        function generateRandomTransaction() {
+            const randomId = Math.floor(Math.random() * 10000);
+            document.getElementById('saleId').value = `SALE_${randomId}`;
+            document.getElementById('nodeId').value = Math.floor(Math.random() * 5) + 1;
+            document.getElementById('posId').value = `POS_${Math.floor(Math.random() * 10) + 1}`;
+            document.getElementById('amount').value = (Math.random() * 50 + 1).toFixed(2);
+            document.getElementById('buyerAddress').value = `0x${Math.random().toString(16).substr(2, 16)}`;
+            document.getElementById('buyerMeta').value = `Random customer ${randomId}`;
+            document.getElementById('signature').value = `signature_${randomId}`;
+        }
+        
+        // Show Response
+        function showResponse(elementId, data, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `response ${type}`;
+            element.style.display = 'block';
+        }
+        
+        // Load initial data
+        window.addEventListener('load', () => {
+            getRelayerStatistics();
+            loadRecentTransactions();
+        });
+    </script>
+</body>
+</html>
+

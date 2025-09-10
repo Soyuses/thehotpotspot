@@ -1,0 +1,38 @@
+# Конфигурация для тестирования
+
+[test]
+# Настройки для unit тестов
+unit_tests = true
+integration_tests = true
+load_tests = true
+security_tests = true
+attack_scenarios = true
+
+# Настройки для производительности
+performance_tests = true
+memory_tests = true
+cpu_tests = true
+network_tests = true
+
+# Настройки для безопасности
+security_scanning = true
+vulnerability_tests = true
+penetration_tests = true
+compliance_tests = true
+
+# Настройки для покрытия кода
+code_coverage = true
+branch_coverage = true
+function_coverage = true
+line_coverage = true
+
+# Настройки для отчетов
+generate_reports = true
+html_reports = true
+json_reports = true
+xml_reports = true
+
+# Настройки для уведомлений
+notify_on_failure = true
+notify_on_success = true
+notify_on_completion = true

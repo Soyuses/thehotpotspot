@@ -32,7 +32,7 @@ pub struct MenuItem {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub price: f64,
+    pub price_subunits: u128, // Цена в subunits (1/100 GEL)
     pub category: String,
     pub ingredients: Vec<String>,
     pub image_hash: Option<String>, // IPFS hash изображения
@@ -230,7 +230,7 @@ impl IPFSStorage {
             .collect();
         
         let total_sales = node_sales.len() as u32;
-        let total_revenue: f64 = node_sales.iter().map(|s| s.price_gel).sum();
+        let total_revenue: f64 = node_sales.iter().map(|s| s.price_subunits as f64 / 100.0).sum();
         
         // Анализируем топ товары
         let mut item_counts: HashMap<String, (u32, f64)> = HashMap::new();
@@ -238,7 +238,7 @@ impl IPFSStorage {
             for item in &sale.items {
                 let entry = item_counts.entry(item.item_id.clone()).or_insert((0, 0.0));
                 entry.0 += item.quantity;
-                entry.1 += item.price * item.quantity as f64;
+                entry.1 += (item.price_subunits * item.quantity as u128) as f64 / 100.0;
             }
         }
         
@@ -264,7 +264,7 @@ impl IPFSStorage {
             
             let entry = daily_sales.entry(date).or_insert((0, 0.0));
             entry.0 += 1;
-            entry.1 += sale.price_gel;
+            entry.1 += sale.price_subunits as f64 / 100.0;
         }
         
         let daily_breakdown: Vec<DailySales> = daily_sales.into_iter()
@@ -299,7 +299,7 @@ impl IPFSStorage {
             if let Some(node) = network.nodes.get(&sale.node_id) {
                 let entry = city_stats.entry(node.city.clone()).or_insert((0, 0.0));
                 entry.0 += 1;
-                entry.1 += sale.price_gel;
+                entry.1 += sale.price_subunits as f64 / 100.0;
             }
         }
         

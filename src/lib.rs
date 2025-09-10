@@ -1,3 +1,4 @@
+pub mod config;
 pub mod simple_server;
 pub mod web_server;
 pub mod enhanced_web_server;
@@ -9,3 +10,10 @@ pub mod ipfs_storage;
 pub mod video_surveillance;
 pub mod video_api;
 pub mod streaming_integration;
+pub mod regulatory_exports;
+pub mod relayer_service;
+pub mod hd_wallet;
+pub mod kyc_aml;
+pub mod database;
+pub mod observability;
+pub mod api_versioning;

@@ -18,13 +18,20 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  */
 contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     
-    // Константы токеномики
+    // Константы токеномики (обновлены согласно новым требованиям)
     uint256 public constant SCALE = 100; // 1 токен = 100 subunits
-    uint256 public constant OWNER_OWNER_SHARE = 51; // 0.51 токена владельцу собственной точки
-    uint256 public constant OWNER_BUYER_SHARE = 49; // 0.49 токена покупателю
-    uint256 public constant FRANCHISE_OWNER_SHARE = 48; // 0.48 токена франчайзи
-    uint256 public constant FRANCHISE_ROYALTY_SHARE = 3; // 0.03 токена основателю (роялти)
-    uint256 public constant FRANCHISE_BUYER_SHARE = 49; // 0.49 токена покупателю
+    uint256 public constant INITIAL_THP_PRICE_GEL = 500; // 5.00 GEL в subunits
+    
+    // Распределение для собственных нод: 48% + 3% + 49% = 100%
+    uint256 public constant OWNER_OWNER_SHARE = 48; // 48% владельцу сети
+    uint256 public constant OWNER_CHARITY_SHARE = 3; // 3% благотворительному фонду
+    uint256 public constant OWNER_BUYER_SHARE = 49; // 49% покупателю
+    
+    // Распределение для франшизных нод: 25% + 24% + 3% + 48% = 100%
+    uint256 public constant FRANCHISE_MAIN_OWNER_SHARE = 25; // 25% владельцу сети
+    uint256 public constant FRANCHISE_OWNER_SHARE = 24; // 24% владельцу франшизы
+    uint256 public constant FRANCHISE_CHARITY_SHARE = 3; // 3% благотворительному фонду
+    uint256 public constant FRANCHISE_BUYER_SHARE = 48; // 48% покупателю
     
     // Типы нод
     enum NodeType { OWNER, FRANCHISE }
@@ -45,7 +52,7 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
         uint256 nodeId;
         string saleId;
         uint256 timestamp;
-        uint256 priceGEL;
+        uint256 priceSubunits; // Цена в subunits (1/100 GEL)
         address buyer;
         string buyerMeta;
         string posId;
@@ -73,6 +80,9 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     uint256 public totalSales = 0;
     uint256 public totalMinted = 0;
     
+    // Благотворительный фонд
+    address public charityFund;
+    
     // События
     event NodeRegistered(uint256 indexed nodeId, address indexed owner, NodeType nodeType, string city);
     event SaleRecorded(uint256 indexed nodeId, string indexed saleId, address indexed buyer, uint256 priceGEL);
@@ -80,10 +90,11 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     event CheckAddressCreated(string indexed saleId, address indexed checkAddress);
     event POSWhitelisted(address indexed posAddress, bool whitelisted);
     
-    constructor() ERC20("FranchiseToken", "FRT") {
+    constructor(address _charityFund) ERC20("FranchiseToken", "FRT") {
         // Генезис: создаем 1 токен для основателя
         _mint(msg.sender, SCALE);
         totalMinted = SCALE;
+        charityFund = _charityFund;
     }
     
     /**
@@ -133,7 +144,7 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
      * @dev Запись продажи и автоматическая эмиссия токенов
      * @param nodeId ID ноды
      * @param saleId ID продажи
-     * @param priceGEL Цена в лари
+     * @param priceSubunits Цена в subunits (1/100 GEL)
      * @param buyer Адрес покупателя
      * @param buyerMeta Метаданные покупателя
      * @param posId ID POS системы
@@ -141,7 +152,7 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     function recordSale(
         uint256 nodeId,
         string memory saleId,
-        uint256 priceGEL,
+        uint256 priceSubunits,
         address buyer,
         string memory buyerMeta,
         string memory posId
@@ -159,7 +170,7 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
             nodeId: nodeId,
             saleId: saleId,
             timestamp: block.timestamp,
-            priceGEL: priceGEL,
+            priceSubunits: priceSubunits,
             buyer: buyer,
             buyerMeta: buyerMeta,
             posId: posId,
@@ -168,13 +179,13 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
         
         // Обновляем статистику ноды
         nodes[nodeId].salesCount++;
-        nodes[nodeId].totalRevenue += priceGEL;
+        nodes[nodeId].totalRevenue += priceSubunits;
         totalSales++;
         
         // Эмитируем и распределяем токены
         _mintAndDistribute(nodeId, buyer, saleId);
         
-        emit SaleRecorded(nodeId, saleId, buyer, priceGEL);
+        emit SaleRecorded(nodeId, saleId, buyer, priceSubunits);
     }
     
     /**
@@ -190,23 +201,30 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
         uint256 royaltyUnits;
         
         if (node.nodeType == NodeType.OWNER) {
-            // Собственная точка: 51% владельцу, 49% покупателю
+            // Собственная точка: 48% владельцу, 3% фонду, 49% покупателю
             ownerUnits = OWNER_OWNER_SHARE;
             buyerUnits = OWNER_BUYER_SHARE;
-            royaltyUnits = 0;
+            royaltyUnits = OWNER_CHARITY_SHARE;
+            
+            // Эмитируем токены
+            _mint(node.owner, ownerUnits);
+            _mint(buyer, buyerUnits);
+            _mint(charityFund, royaltyUnits);
         } else {
-            // Франшиза: 48% франчайзи, 3% роялти, 49% покупателю
-            ownerUnits = FRANCHISE_OWNER_SHARE;
+            // Франшиза: 25% владельцу сети, 24% франчайзи, 3% фонду, 48% покупателю
+            uint256 mainOwnerUnits = FRANCHISE_MAIN_OWNER_SHARE;
+            uint256 franchiseOwnerUnits = FRANCHISE_OWNER_SHARE;
             buyerUnits = FRANCHISE_BUYER_SHARE;
-            royaltyUnits = FRANCHISE_ROYALTY_SHARE;
-        }
-        
-        // Эмитируем токены
-        _mint(node.owner, ownerUnits);
-        _mint(buyer, buyerUnits);
-        
-        if (royaltyUnits > 0) {
-            _mint(owner(), royaltyUnits);
+            royaltyUnits = FRANCHISE_CHARITY_SHARE;
+            
+            // Эмитируем токены
+            _mint(owner(), mainOwnerUnits); // Владелец сети
+            _mint(node.owner, franchiseOwnerUnits); // Владелец франшизы
+            _mint(buyer, buyerUnits);
+            _mint(charityFund, royaltyUnits);
+            
+            // Обновляем переменные для записи в TokenMinting
+            ownerUnits = franchiseOwnerUnits;
         }
         
         // Записываем информацию об эмиссии
@@ -228,6 +246,13 @@ contract FranchiseToken is ERC20, Ownable, Pausable, ReentrancyGuard {
     function whitelistPOS(address posAddress, bool whitelisted) external onlyOwner {
         whitelistedPOS[posAddress] = whitelisted;
         emit POSWhitelisted(posAddress, whitelisted);
+    }
+    
+    /**
+     * @dev Установка адреса благотворительного фонда
+     */
+    function setCharityFund(address _charityFund) external onlyOwner {
+        charityFund = _charityFund;
     }
     
     /**

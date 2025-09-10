@@ -220,7 +220,7 @@ impl ConsensusAlgorithm {
         }
 
         // Средний чек
-        let total_revenue: f64 = node_sales.iter().map(|s| s.price_gel).sum();
+        let total_revenue: f64 = node_sales.iter().map(|s| s.price_subunits as f64 / 100.0).sum();
         let avg_check = total_revenue / node_sales.len() as f64;
 
         // Разнообразие товаров

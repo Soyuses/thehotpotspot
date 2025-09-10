@@ -1,0 +1,52 @@
+# Конфигурация cargo-deny для проверки безопасности зависимостей
+
+[advisories]
+# Проверяем на уязвимости
+vulnerability = "deny"
+# Проверяем на неактивные пакеты
+unmaintained = "warn"
+# Проверяем на небезопасные пакеты
+unsound = "deny"
+# Проверяем на устаревшие пакеты
+yanked = "deny"
+
+[licenses]
+# Разрешенные лицензии
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unlicense",
+    "Zlib",
+    "CC0-1.0",
+    "MPL-2.0",
+]
+
+# Запрещенные лицензии
+deny = [
+    "GPL-2.0",
+    "GPL-3.0",
+    "AGPL-3.0",
+    "LGPL-2.0",
+    "LGPL-2.1",
+    "LGPL-3.0",
+]
+
+# Исключения для конкретных пакетов
+exceptions = [
+    { name = "some-package", allow = ["GPL-3.0"] },
+]
+
+[bans]
+# Проверяем на дублирующиеся пакеты
+duplicates = "deny"
+# Проверяем на множественные версии
+multiple-versions = "warn"
+
+[source]
+# Проверяем источники пакетов
+unknown-registry = "deny"
+unpublished = "deny"
+git = "allow"

@@ -1,0 +1,228 @@
+# Конфигурация clippy для дополнительных проверок безопасности
+
+# Запрещаем использование небезопасного кода
+avoid-breaking-exported-api = true
+avoid-unnecessary-option-unwrap = true
+avoid-unwrap-in-result = true
+avoid-unwrap-or-default = true
+avoid-unwrap-or-else = true
+avoid-unwrap-or-return = true
+avoid-unwrap-or-return-default = true
+avoid-unwrap-or-return-option = true
+avoid-unwrap-or-return-result = true
+
+# Проверяем на потенциальные проблемы с памятью
+avoid-let-and-return = true
+avoid-mut-from-ref = true
+avoid-ref-bindings = true
+avoid-returning-option = true
+avoid-returning-result = true
+avoid-single-char-binding-names = true
+avoid-single-char-lifetime-names = true
+avoid-single-char-pattern-names = true
+avoid-single-char-variable-names = true
+
+# Проверяем на проблемы с производительностью
+avoid-vec-alloc = true
+avoid-vec-realloc = true
+avoid-vec-resize = true
+avoid-vec-shrink-to-fit = true
+avoid-vec-truncate = true
+
+# Проверяем на проблемы с безопасностью
+avoid-unsafe-code = true
+avoid-unsafe-functions = true
+avoid-unsafe-methods = true
+avoid-unsafe-traits = true
+avoid-unsafe-types = true
+
+# Проверяем на проблемы с конфиденциальностью
+avoid-println = true
+avoid-print-stdout = true
+avoid-print-stderr = true
+avoid-print-debug = true
+avoid-print-info = true
+avoid-print-warn = true
+avoid-print-error = true
+
+# Проверяем на проблемы с логированием
+avoid-log-debug = true
+avoid-log-info = true
+avoid-log-warn = true
+avoid-log-error = true
+avoid-log-trace = true
+
+# Проверяем на проблемы с сетью
+avoid-network-calls = true
+avoid-http-calls = true
+avoid-https-calls = true
+avoid-tcp-calls = true
+avoid-udp-calls = true
+
+# Проверяем на проблемы с файловой системой
+avoid-file-operations = true
+avoid-dir-operations = true
+avoid-path-operations = true
+avoid-fs-operations = true
+
+# Проверяем на проблемы с процессами
+avoid-process-spawn = true
+avoid-process-exec = true
+avoid-process-fork = true
+avoid-process-kill = true
+
+# Проверяем на проблемы с потоками
+avoid-thread-spawn = true
+avoid-thread-join = true
+avoid-thread-detach = true
+avoid-thread-sleep = true
+
+# Проверяем на проблемы с синхронизацией
+avoid-mutex-lock = true
+avoid-rwlock-read = true
+avoid-rwlock-write = true
+avoid-semaphore-acquire = true
+avoid-semaphore-release = true
+
+# Проверяем на проблемы с памятью
+avoid-box-alloc = true
+avoid-vec-alloc = true
+avoid-string-alloc = true
+avoid-vec-alloc = true
+avoid-hashmap-alloc = true
+avoid-hashset-alloc = true
+avoid-btreemap-alloc = true
+avoid-btreeset-alloc = true
+
+# Проверяем на проблемы с итераторами
+avoid-iterator-collect = true
+avoid-iterator-fold = true
+avoid-iterator-reduce = true
+avoid-iterator-sum = true
+avoid-iterator-product = true
+avoid-iterator-count = true
+avoid-iterator-any = true
+avoid-iterator-all = true
+avoid-iterator-find = true
+avoid-iterator-position = true
+avoid-iterator-rposition = true
+avoid-iterator-max = true
+avoid-iterator-min = true
+avoid-iterator-max-by = true
+avoid-iterator-min_by = true
+avoid-iterator-max_by_key = true
+avoid-iterator-min_by_key = true
+
+# Проверяем на проблемы с ошибками
+avoid-option-unwrap = true
+avoid-result-unwrap = true
+avoid-option-expect = true
+avoid-result-expect = true
+avoid-option-unwrap-or = true
+avoid-result-unwrap-or = true
+avoid-option-unwrap-or-else = true
+avoid-result-unwrap-or-else = true
+avoid-option-unwrap-or-default = true
+avoid-result-unwrap-or-default = true
+
+# Проверяем на проблемы с типами
+avoid-as-ref = true
+avoid-as-mut = true
+avoid-into = true
+avoid-from = true
+avoid-try-into = true
+avoid-try-from = true
+
+# Проверяем на проблемы с конвертацией
+avoid-to-string = true
+avoid-to-owned = true
+avoid-to-vec = true
+avoid-to-array = true
+avoid-to-slice = true
+
+# Проверяем на проблемы с клонированием
+avoid-clone = true
+avoid-copy = true
+avoid-deep-clone = true
+avoid-shallow-clone = true
+
+# Проверяем на проблемы с заимствованием
+avoid-borrow = true
+avoid-borrow-mut = true
+avoid-ref = true
+avoid-ref-mut = true
+
+# Проверяем на проблемы с владением
+avoid-move = true
+avoid-take = true
+avoid-replace = true
+avoid-swap = true
+
+# Проверяем на проблемы с жизненным циклом
+avoid-lifetime = true
+avoid-static-lifetime = true
+avoid-borrowed-lifetime = true
+avoid-owned-lifetime = true
+
+# Проверяем на проблемы с трейтами
+avoid-trait-object = true
+avoid-dyn-trait = true
+avoid-box-trait = true
+avoid-rc-trait = true
+avoid-arc-trait = true
+
+# Проверяем на проблемы с дженериками
+avoid-generic-parameters = true
+avoid-type-parameters = true
+avoid-lifetime-parameters = true
+avoid-const-parameters = true
+
+# Проверяем на проблемы с макросами
+avoid-macro-calls = true
+avoid-proc-macro = true
+avoid-derive-macro = true
+avoid-attribute-macro = true
+avoid-function-like-macro = true
+
+# Проверяем на проблемы с атрибутами
+avoid-attribute = true
+avoid-cfg-attribute = true
+avoid-test-attribute = true
+avoid-bench-attribute = true
+avoid-ignore-attribute = true
+
+# Проверяем на проблемы с документацией
+avoid-missing-docs = true
+avoid-missing-doc-examples = true
+avoid-missing-doc-tests = true
+avoid-missing-doc-comments = true
+
+# Проверяем на проблемы с тестами
+avoid-missing-tests = true
+avoid-missing-integration-tests = true
+avoid-missing-unit-tests = true
+avoid-missing-doc-tests = true
+
+# Проверяем на проблемы с производительностью
+avoid-slow-algorithms = true
+avoid-inefficient-algorithms = true
+avoid-memory-inefficient-algorithms = true
+avoid-cpu-inefficient-algorithms = true
+
+# Проверяем на проблемы с безопасностью
+avoid-security-issues = true
+avoid-vulnerabilities = true
+avoid-exploits = true
+avoid-attacks = true
+
+# Проверяем на проблемы с конфиденциальностью
+avoid-privacy-issues = true
+avoid-data-leaks = true
+avoid-information-disclosure = true
+avoid-unauthorized-access = true
+
+# Проверяем на проблемы с соответствием
+avoid-compliance-issues = true
+avoid-regulatory-issues = true
+avoid-legal-issues = true
+avoid-licensing-issues = true

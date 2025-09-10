@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hot Pot Spot - Database Test Interface</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            background: #fafafa;
+        }
+        
+        .section h2 {
+            color: #333;
+            margin-top: 0;
+            border-bottom: 2px solid #28a745;
+            padding-bottom: 10px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #28a745;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .form-row .form-group {
+            flex: 1;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        
+        .response.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #28a745;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .user-card {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 10px;
+            border-left: 4px solid #28a745;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .user-id {
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-break: break-all;
+        }
+        
+        .kyc-status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status-verified { background: #28a745; color: white; }
+        .status-pending { background: #ffc107; color: #856404; }
+        .status-rejected { background: #dc3545; color: white; }
+        .status-notstarted { background: #6c757d; color: white; }
+        
+        .connection-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .status-connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status-disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .migration-info {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .migration-item {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 6px;
+            border-left: 3px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ Database Test Interface</h1>
+            <p>PostgreSQL database management and testing</p>
+        </div>
+        
+        <div class="content">
+            <!-- Database Connection Section -->
+            <div class="section">
+                <h2>🔌 Database Connection</h2>
+                <form id="connectionForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="host">Host:</label>
+                            <input type="text" id="host" value="localhost" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="port">Port:</label>
+                            <input type="number" id="port" value="5432" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="database">Database:</label>
+                            <input type="text" id="database" value="thehotpotspot" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="username">Username:</label>
+                            <input type="text" id="username" value="postgres" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="password">Password:</label>
+                        <input type="password" id="password" value="password" required>
+                    </div>
+                    
+                    <button type="submit">🔌 Initialize Database</button>
+                </form>
+                
+                <div id="connectionStatus" class="connection-status status-disconnected">
+                    Database: Not Connected
+                </div>
+                
+                <div id="connectionResponse" class="response" style="display: none;"></div>
+            </div>
+            
+            <!-- Database Statistics Section -->
+            <div class="section">
+                <h2>📊 Database Statistics</h2>
+                <button type="button" onclick="getDatabaseStats()">📈 Get Statistics</button>
+                
+                <div id="statsResponse" class="response" style="display: none;"></div>
+                <div id="statsGrid" class="stats-grid" style="display: none;"></div>
+            </div>
+            
+            <!-- Database Cleanup Section -->
+            <div class="section">
+                <h2>🧹 Database Cleanup</h2>
+                <form id="cleanupForm">
+                    <div class="form-group">
+                        <label for="cleanupDays">Cleanup data older than (days):</label>
+                        <input type="number" id="cleanupDays" value="30" min="1" max="365">
+                    </div>
+                    <button type="submit">🧹 Cleanup Old Data</button>
+                </form>
+                <div id="cleanupResponse" class="response" style="display: none;"></div>
+            </div>
+            
+            <!-- User Management Section -->
+            <div class="section">
+                <h2>👥 User Management</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userId">User ID:</label>
+                        <input type="text" id="userId" placeholder="Enter user ID">
+                    </div>
+                    <div class="form-group">
+                        <button type="button" onclick="getUserFromDatabase()">🔍 Get User</button>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="userLimit">Limit:</label>
+                        <input type="number" id="userLimit" value="10" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="userOffset">Offset:</label>
+                        <input type="number" id="userOffset" value="0" min="0">
+                    </div>
+                </div>
+                
+                <button type="button" onclick="getAllUsersFromDatabase()">👥 Get All Users</button>
+                
+                <div id="userResponse" class="response" style="display: none;"></div>
+            </div>
+            
+            <!-- Migration Information Section -->
+            <div class="section">
+                <h2>🔄 Migration Information</h2>
+                <div class="migration-info">
+                    <h3>Available Migrations:</h3>
+                    <div class="migration-item">
+                        <strong>v1:</strong> create_users_table - Users and KYC data
+                    </div>
+                    <div class="migration-item">
+                        <strong>v2:</strong> create_documents_table - Document management
+                    </div>
+                    <div class="migration-item">
+                        <strong>v3:</strong> create_roles_table - Role definitions
+                    </div>
+                    <div class="migration-item">
+                        <strong>v4:</strong> create_permissions_table - Permission definitions
+                    </div>
+                    <div class="migration-item">
+                        <strong>v5:</strong> create_role_permissions_table - Role-Permission mapping
+                    </div>
+                    <div class="migration-item">
+                        <strong>v6:</strong> create_user_roles_table - User-Role assignments
+                    </div>
+                    <div class="migration-item">
+                        <strong>v7:</strong> create_wallets_table - HD wallet storage
+                    </div>
+                    <div class="migration-item">
+                        <strong>v8:</strong> create_check_wallets_table - Check wallet management
+                    </div>
+                    <div class="migration-item">
+                        <strong>v9:</strong> create_transactions_table - Transaction history
+                    </div>
+                    <div class="migration-item">
+                        <strong>v10:</strong> create_audit_logs_table - Audit trail
+                    </div>
+                    <div class="migration-item">
+                        <strong>v11:</strong> create_indexes - Performance optimization
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Database Users Display -->
+            <div class="section">
+                <h2>👥 Database Users</h2>
+                <button type="button" onclick="loadDatabaseUsers()">🔄 Refresh</button>
+                
+                <div id="databaseUsers"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8080';
+        let isConnected = false;
+        
+        // Initialize Database Connection
+        document.getElementById('connectionForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                host: document.getElementById('host').value,
+                port: parseInt(document.getElementById('port').value),
+                database: document.getElementById('database').value,
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        InitializeDatabase: formData
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('connectionResponse', result, 'success');
+                
+                if (result.DatabaseInitialized) {
+                    isConnected = true;
+                    updateConnectionStatus(true);
+                    getDatabaseStats(); // Auto-load stats after connection
+                }
+            } catch (error) {
+                showResponse('connectionResponse', { error: error.message }, 'error');
+                isConnected = false;
+                updateConnectionStatus(false);
+            }
+        });
+        
+        // Get Database Statistics
+        async function getDatabaseStats() {
+            if (!isConnected) {
+                showResponse('statsResponse', { error: 'Database not connected' }, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        GetDatabaseStats: {}
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('statsResponse', result, 'info');
+                
+                if (result.DatabaseStats) {
+                    showStatisticsGrid(result.DatabaseStats);
+                }
+            } catch (error) {
+                showResponse('statsResponse', { error: error.message }, 'error');
+            }
+        }
+        
+        // Cleanup Old Data
+        document.getElementById('cleanupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!isConnected) {
+                showResponse('cleanupResponse', { error: 'Database not connected' }, 'error');
+                return;
+            }
+            
+            const days = parseInt(document.getElementById('cleanupDays').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        CleanupOldData: { days }
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('cleanupResponse', result, 'success');
+                
+                if (result.CleanupCompleted) {
+                    // Refresh stats after cleanup
+                    setTimeout(() => getDatabaseStats(), 1000);
+                }
+            } catch (error) {
+                showResponse('cleanupResponse', { error: error.message }, 'error');
+            }
+        });
+        
+        // Get User from Database
+        async function getUserFromDatabase() {
+            if (!isConnected) {
+                showResponse('userResponse', { error: 'Database not connected' }, 'error');
+                return;
+            }
+            
+            const userId = document.getElementById('userId').value;
+            if (!userId) {
+                showResponse('userResponse', { error: 'Please enter a user ID' }, 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        GetUserFromDatabase: { user_id: userId }
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('userResponse', result, 'info');
+            } catch (error) {
+                showResponse('userResponse', { error: error.message }, 'error');
+            }
+        }
+        
+        // Get All Users from Database
+        async function getAllUsersFromDatabase() {
+            if (!isConnected) {
+                showResponse('userResponse', { error: 'Database not connected' }, 'error');
+                return;
+            }
+            
+            const limit = parseInt(document.getElementById('userLimit').value);
+            const offset = parseInt(document.getElementById('userOffset').value);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        GetAllUsersFromDatabase: { limit, offset }
+                    })
+                });
+                
+                const result = await response.json();
+                showResponse('userResponse', result, 'info');
+                
+                if (result.DatabaseUsersList) {
+                    displayUsersList(result.DatabaseUsersList.users);
+                }
+            } catch (error) {
+                showResponse('userResponse', { error: error.message }, 'error');
+            }
+        }
+        
+        // Show Statistics Grid
+        function showStatisticsGrid(stats) {
+            const grid = document.getElementById('statsGrid');
+            grid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_users}</div>
+                    <div class="stat-label">Total Users</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_documents}</div>
+                    <div class="stat-label">Total Documents</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_wallets}</div>
+                    <div class="stat-label">Total Wallets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_transactions}</div>
+                    <div class="stat-label">Total Transactions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.total_audit_logs}</div>
+                    <div class="stat-label">Audit Logs</div>
+                </div>
+            `;
+            grid.style.display = 'grid';
+        }
+        
+        // Display Users List
+        function displayUsersList(users) {
+            const container = document.getElementById('databaseUsers');
+            container.innerHTML = '';
+            
+            users.forEach(user => {
+                const card = document.createElement('div');
+                card.className = 'user-card';
+                card.innerHTML = `
+                    <div><strong>User ID:</strong></div>
+                    <div class="user-id">${user.user_id}</div>
+                    <div><strong>Email:</strong> ${user.email}</div>
+                    <div><strong>Name:</strong> ${user.first_name} ${user.last_name}</div>
+                    <div><strong>KYC Status:</strong> 
+                        <span class="kyc-status status-${user.kyc_status.toLowerCase()}">${user.kyc_status}</span>
+                    </div>
+                    <div><strong>Created:</strong> ${user.created_at}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+        
+        // Update Connection Status
+        function updateConnectionStatus(connected) {
+            const statusElement = document.getElementById('connectionStatus');
+            if (connected) {
+                statusElement.textContent = 'Database: Connected';
+                statusElement.className = 'connection-status status-connected';
+            } else {
+                statusElement.textContent = 'Database: Not Connected';
+                statusElement.className = 'connection-status status-disconnected';
+            }
+        }
+        
+        // Load Database Users (simulated)
+        async function loadDatabaseUsers() {
+            const container = document.getElementById('databaseUsers');
+            container.innerHTML = '<p>Loading database users...</p>';
+            
+            if (!isConnected) {
+                container.innerHTML = '<p>Please connect to database first</p>';
+                return;
+            }
+            
+            // Simulate loading users
+            setTimeout(() => {
+                container.innerHTML = `
+                    <div class="user-card">
+                        <div><strong>User ID:</strong></div>
+                        <div class="user-id">user_abc123</div>
+                        <div><strong>Email:</strong> john.doe@example.com</div>
+                        <div><strong>Name:</strong> John Doe</div>
+                        <div><strong>KYC Status:</strong> 
+                            <span class="kyc-status status-verified">Verified</span>
+                        </div>
+                        <div><strong>Created:</strong> 2024-01-15 10:30:00 UTC</div>
+                    </div>
+                    <div class="user-card">
+                        <div><strong>User ID:</strong></div>
+                        <div class="user-id">user_def456</div>
+                        <div><strong>Email:</strong> jane.smith@example.com</div>
+                        <div><strong>Name:</strong> Jane Smith</div>
+                        <div><strong>KYC Status:</strong> 
+                            <span class="kyc-status status-pending">Pending</span>
+                        </div>
+                        <div><strong>Created:</strong> 2024-01-16 14:20:00 UTC</div>
+                    </div>
+                `;
+            }, 1000);
+        }
+        
+        // Show Response
+        function showResponse(elementId, data, type) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `response ${type}`;
+            element.style.display = 'block';
+        }
+        
+        // Load initial data
+        window.addEventListener('load', () => {
+            updateConnectionStatus(false);
+        });
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,367 @@
+name: Security Scanning
+
+on:
+  schedule:
+    # Запускаем сканирование безопасности каждый день в 2:00 UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Сканирование зависимостей
+  dependency-scan:
+    name: Dependency Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+    
+    - name: Run cargo audit
+      run: cargo audit
+    
+    - name: Install cargo-deny
+      run: cargo install cargo-deny
+    
+    - name: Run cargo-deny check
+      run: cargo deny check
+    
+    - name: Install cargo-outdated
+      run: cargo install cargo-outdated
+    
+    - name: Check for outdated dependencies
+      run: cargo outdated --exit-code 1
+
+  # Сканирование кода на уязвимости
+  code-scan:
+    name: Code Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run clippy security lints
+      run: cargo clippy --all-targets --all-features -- -D warnings -A clippy::all
+    
+    - name: Install cargo-geiger
+      run: cargo install cargo-geiger
+    
+    - name: Run cargo-geiger (unsafe code detection)
+      run: cargo geiger
+    
+    - name: Install cargo-miri
+      run: cargo install cargo-miri
+    
+    - name: Run Miri (undefined behavior detection)
+      run: cargo miri test --lib
+
+  # Сканирование секретов
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  # Сканирование конфигурации
+  config-scan:
+    name: Configuration Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # Сканирование Docker образов (если есть)
+  docker-scan:
+    name: Docker Security Scan
+    runs-on: ubuntu-latest
+    if: hashFiles('**/Dockerfile') != ''
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Build Docker image
+      run: |
+        if [ -f "Dockerfile" ]; then
+          docker build -t blockchain-project:latest .
+        fi
+    
+    - name: Run Trivy vulnerability scanner on Docker image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'blockchain-project:latest'
+        format: 'sarif'
+        output: 'trivy-docker-results.sarif'
+    
+    - name: Upload Trivy Docker scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-docker-results.sarif'
+
+  # Сканирование с помощью CodeQL
+  codeql:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'rust' ]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build project
+      run: cargo build --release
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+  # Сканирование лицензий
+  license-scan:
+    name: License Compliance Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install cargo-license
+      run: cargo install cargo-license
+    
+    - name: Check licenses
+      run: cargo license --json > licenses.json
+    
+    - name: Upload license report
+      uses: actions/upload-artifact@v3
+      with:
+        name: license-report
+        path: licenses.json
+
+  # Сканирование производительности и безопасности
+  performance-security:
+    name: Performance and Security Analysis
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install cargo-flamegraph
+      run: cargo install flamegraph
+    
+    - name: Run security tests
+      run: cargo test --test security -- --nocapture
+    
+    - name: Run load tests
+      run: cargo test --test load_testing -- --nocapture
+    
+    - name: Run attack scenario tests
+      run: cargo test --test attack_scenarios -- --nocapture
+
+  # Генерация отчета о безопасности
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, secret-scan, config-scan, codeql, license-scan, performance-security]
+    if: always()
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+      with:
+        path: ./artifacts
+    
+    - name: Generate security report
+      run: |
+        echo "# Security Scan Report" > security-report.md
+        echo "Generated on: $(date)" >> security-report.md
+        echo "" >> security-report.md
+        
+        echo "## Scan Results Summary" >> security-report.md
+        echo "- Dependency Scan: ${{ needs.dependency-scan.result }}" >> security-report.md
+        echo "- Code Scan: ${{ needs.code-scan.result }}" >> security-report.md
+        echo "- Secret Scan: ${{ needs.secret-scan.result }}" >> security-report.md
+        echo "- Config Scan: ${{ needs.config-scan.result }}" >> security-report.md
+        echo "- CodeQL Analysis: ${{ needs.codeql.result }}" >> security-report.md
+        echo "- License Scan: ${{ needs.license-scan.result }}" >> security-report.md
+        echo "- Performance & Security: ${{ needs.performance-security.result }}" >> security-report.md
+        
+        echo "" >> security-report.md
+        echo "## Recommendations" >> security-report.md
+        echo "1. Review and address any high or critical vulnerabilities" >> security-report.md
+        echo "2. Update dependencies regularly" >> security-report.md
+        echo "3. Monitor for new security advisories" >> security-report.md
+        echo "4. Implement security best practices in code" >> security-report.md
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: security-report.md
+    
+    - name: Comment on PR
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const report = fs.readFileSync('security-report.md', 'utf8');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: report
+          });
+
+  # Уведомления о безопасности
+  security-notify:
+    name: Security Notifications
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, code-scan, secret-scan, config-scan, codeql, license-scan, performance-security]
+    if: always() && (needs.dependency-scan.result == 'failure' || needs.code-scan.result == 'failure' || needs.secret-scan.result == 'failure' || needs.config-scan.result == 'failure' || needs.codeql.result == 'failure' || needs.license-scan.result == 'failure' || needs.performance-security.result == 'failure')
+    steps:
+    - name: Notify security team
+      run: |
+        echo "🚨 Security scan failed! Please review the results."
+        # Здесь может быть уведомление в Slack, Discord, email и т.д.

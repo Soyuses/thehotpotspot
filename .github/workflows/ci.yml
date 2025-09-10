@@ -1,0 +1,381 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Линтинг и форматирование
+  lint:
+    name: Lint and Format
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt, clippy
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+    
+    - name: Run clippy
+      run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # Unit тесты
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run unit tests
+      run: cargo test --lib -- --nocapture
+
+  # Интеграционные тесты
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run integration tests
+      run: cargo test --test integration -- --nocapture
+
+  # Нагрузочные тесты
+  load-tests:
+    name: Load Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run load tests
+      run: cargo test --test load_testing -- --nocapture
+
+  # Тесты безопасности
+  security-tests:
+    name: Security Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run security tests
+      run: cargo test --test security -- --nocapture
+
+  # Сборка проекта
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build project
+      run: cargo build --release
+    
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: blockchain-project-build
+        path: target/release/
+
+  # Сканирование безопасности
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install cargo-audit
+      run: cargo install cargo-audit
+    
+    - name: Run security audit
+      run: cargo audit
+    
+    - name: Install cargo-deny
+      run: cargo install cargo-deny
+    
+    - name: Run cargo-deny check
+      run: cargo deny check
+
+  # Тестирование на разных платформах
+  test-matrix:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        rust: [stable, beta]
+        exclude:
+          - os: windows-latest
+            rust: beta
+          - os: macos-latest
+            rust: beta
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust ${{ matrix.rust }}
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run tests
+      run: cargo test --all-targets
+
+  # Генерация документации
+  docs:
+    name: Generate Documentation
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rust-docs
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Generate documentation
+      run: cargo doc --no-deps --document-private-items
+    
+    - name: Upload documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation
+        path: target/doc/
+
+  # Деплой (только для main ветки)
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: [build, security-scan, test-matrix]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download build artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: blockchain-project-build
+        path: target/release/
+    
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Здесь будет логика деплоя
+        # Например, загрузка на сервер, обновление Docker контейнеров и т.д.
+    
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests..."
+        # Здесь будут smoke тесты для проверки деплоя
+    
+    - name: Notify deployment
+      run: |
+        echo "Deployment completed successfully!"
+        # Здесь может быть уведомление в Slack, Discord и т.д.
+
+  # Уведомления
+  notify:
+    name: Notify
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests, integration-tests, load-tests, security-tests, build, security-scan, test-matrix, docs]
+    if: always()
+    steps:
+    - name: Notify on success
+      if: ${{ needs.lint.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success' && needs.load-tests.result == 'success' && needs.security-tests.result == 'success' && needs.build.result == 'success' && needs.security-scan.result == 'success' && needs.test-matrix.result == 'success' && needs.docs.result == 'success' }}
+      run: |
+        echo "✅ All CI/CD pipeline steps completed successfully!"
+        # Здесь может быть уведомление об успешном выполнении
+    
+    - name: Notify on failure
+      if: ${{ needs.lint.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.load-tests.result == 'failure' || needs.security-tests.result == 'failure' || needs.build.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-matrix.result == 'failure' || needs.docs.result == 'failure' }}
+      run: |
+        echo "❌ CI/CD pipeline failed!"
+        # Здесь может быть уведомление об ошибке
