@@ -347,7 +347,7 @@ impl KYCAmlManager {
     pub fn start_kyc_process(&mut self, user_id: &str, kyc_level: KYCLevel) -> Result<(), KYCAmlError> {
         let user = self.users.get_mut(user_id)
             .ok_or(KYCAmlError::UserNotFound)?;
-
+        
         if user.kyc_status != KYCStatus::NotStarted {
             return Err(KYCAmlError::KYCAlreadyStarted);
         }
@@ -357,21 +357,24 @@ impl KYCAmlManager {
         user.kyc_started_at = Some(Utc::now());
         user.updated_at = Utc::now();
 
-        self.log_audit_event(user_id, "KYC_STARTED", "kyc", true, Some(&format!("KYC level: {:?}", kyc_level)));
+        let kyc_level_str = format!("{:?}", kyc_level);
+        self.log_audit_event(user_id, "KYC_STARTED", "kyc", true, Some(&kyc_level_str));
         
         Ok(())
     }
 
     /// Загрузка документа для KYC
     pub fn upload_document(&mut self, user_id: &str, document_type: DocumentType, file_hash: String, file_path: String) -> Result<String, KYCAmlError> {
+        // Генерируем document_id до получения mutable borrow
+        let document_id = self.generate_document_id(user_id, &document_type);
+        let document_type_str = format!("{:?}", document_type);
+        
         let user = self.users.get_mut(user_id)
             .ok_or(KYCAmlError::UserNotFound)?;
 
         if user.kyc_status != KYCStatus::Pending {
             return Err(KYCAmlError::KYCNotInProgress);
         }
-
-        let document_id = self.generate_document_id(user_id, &document_type);
         
         let document = KYCDocument {
             document_id: document_id.clone(),
@@ -389,7 +392,7 @@ impl KYCAmlManager {
         user.documents.push(document);
         user.updated_at = Utc::now();
 
-        self.log_audit_event(user_id, "DOCUMENT_UPLOADED", "document", true, Some(&format!("Document type: {:?}", document_type)));
+        self.log_audit_event(user_id, "DOCUMENT_UPLOADED", "document", true, Some(&document_type_str));
         
         Ok(document_id)
     }
@@ -430,19 +433,30 @@ impl KYCAmlManager {
         }
 
         // Проверяем, что все необходимые документы одобрены
-        let required_docs = self.get_required_documents(&user.kyc_level);
+        let kyc_level = user.kyc_level.clone();
         let approved_docs: HashSet<DocumentType> = user.documents.iter()
             .filter(|doc| doc.status == DocumentStatus::Approved)
             .map(|doc| doc.document_type.clone())
             .collect();
 
+        // Освобождаем borrow пользователя
+        drop(user);
+
+        // Получаем required_docs после освобождения borrow
+        let required_docs = self.get_required_documents(&kyc_level);
         if !required_docs.iter().all(|doc_type| approved_docs.contains(doc_type)) {
             return Err(KYCAmlError::IncompleteDocuments);
         }
 
         // Выполняем проверки AML
-        self.perform_aml_checks(user)?;
+        let mut user_clone = {
+            let user = self.users.get(user_id).unwrap().clone();
+            user
+        };
+        self.perform_aml_checks(&mut user_clone)?;
 
+        // Обновляем пользователя
+        let user = self.users.get_mut(user_id).unwrap();
         user.kyc_status = KYCStatus::Verified;
         user.kyc_completed_at = Some(Utc::now());
         user.kyc_expires_at = Some(Utc::now() + Duration::days(365)); // KYC действителен 1 год

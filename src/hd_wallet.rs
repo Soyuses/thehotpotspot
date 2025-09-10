@@ -347,7 +347,7 @@ pub enum HDWalletError {
     #[error("Wallet not found: {0}")]
     WalletNotFound(String),
     
-    #[error("Check wallet not found: {0}")]
+    #[error("Check wallet not found")]
     CheckWalletNotFound,
     
     #[error("Invalid activation code")]

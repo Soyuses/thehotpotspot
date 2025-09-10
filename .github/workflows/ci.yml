@@ -78,6 +78,124 @@ jobs:
     - name: Run unit tests
       run: cargo test --lib -- --nocapture
 
+  # Тесты с PostgreSQL
+  database-tests:
+    name: Database Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: test_blockchain
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install PostgreSQL client
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y postgresql-client
+    
+    - name: Initialize test database
+      run: |
+        PGPASSWORD=password psql -h localhost -U postgres -d test_blockchain -f tests/init_test_db.sql
+    
+    - name: Run database tests
+      env:
+        DATABASE_URL: postgresql://postgres:password@localhost:5432/test_blockchain
+      run: cargo test --test test_database -- --nocapture
+
+  # Property-based тесты
+  property-tests:
+    name: Property Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run property tests
+      run: cargo test --test property_tests -- --nocapture
+
+  # Нагрузочные тесты
+  benchmark-tests:
+    name: Benchmark Tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/git
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run benchmark tests
+      run: cargo bench --bench load_tests
+
   # Интеграционные тесты
   integration-tests:
     name: Integration Tests
@@ -107,7 +225,7 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Run integration tests
-      run: cargo test --test integration -- --nocapture
+      run: cargo test --test integration_tests -- --nocapture
 
   # Нагрузочные тесты
   load-tests:
@@ -138,7 +256,7 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Run load tests
-      run: cargo test --test load_testing -- --nocapture
+      run: cargo test --test integration_tests -- --nocapture
 
   # Тесты безопасности
   security-tests:
@@ -169,13 +287,13 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Run security tests
-      run: cargo test --test security -- --nocapture
+      run: cargo test --test integration_tests -- --nocapture
 
   # Сборка проекта
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, unit-tests]
+    needs: [lint, unit-tests, database-tests, property-tests, benchmark-tests, integration-tests, load-tests, security-tests]
     steps:
     - uses: actions/checkout@v4
     
@@ -365,17 +483,17 @@ jobs:
   notify:
     name: Notify
     runs-on: ubuntu-latest
-    needs: [lint, unit-tests, integration-tests, load-tests, security-tests, build, security-scan, test-matrix, docs]
+    needs: [lint, unit-tests, database-tests, property-tests, benchmark-tests, integration-tests, load-tests, security-tests, build, security-scan, test-matrix, docs]
     if: always()
     steps:
     - name: Notify on success
-      if: ${{ needs.lint.result == 'success' && needs.unit-tests.result == 'success' && needs.integration-tests.result == 'success' && needs.load-tests.result == 'success' && needs.security-tests.result == 'success' && needs.build.result == 'success' && needs.security-scan.result == 'success' && needs.test-matrix.result == 'success' && needs.docs.result == 'success' }}
+      if: ${{ needs.lint.result == 'success' && needs.unit-tests.result == 'success' && needs.database-tests.result == 'success' && needs.property-tests.result == 'success' && needs.benchmark-tests.result == 'success' && needs.integration-tests.result == 'success' && needs.load-tests.result == 'success' && needs.security-tests.result == 'success' && needs.build.result == 'success' && needs.security-scan.result == 'success' && needs.test-matrix.result == 'success' && needs.docs.result == 'success' }}
       run: |
         echo "✅ All CI/CD pipeline steps completed successfully!"
         # Здесь может быть уведомление об успешном выполнении
     
     - name: Notify on failure
-      if: ${{ needs.lint.result == 'failure' || needs.unit-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.load-tests.result == 'failure' || needs.security-tests.result == 'failure' || needs.build.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-matrix.result == 'failure' || needs.docs.result == 'failure' }}
+      if: ${{ needs.lint.result == 'failure' || needs.unit-tests.result == 'failure' || needs.database-tests.result == 'failure' || needs.property-tests.result == 'failure' || needs.benchmark-tests.result == 'failure' || needs.integration-tests.result == 'failure' || needs.load-tests.result == 'failure' || needs.security-tests.result == 'failure' || needs.build.result == 'failure' || needs.security-scan.result == 'failure' || needs.test-matrix.result == 'failure' || needs.docs.result == 'failure' }}
       run: |
         echo "❌ CI/CD pipeline failed!"
         # Здесь может быть уведомление об ошибке

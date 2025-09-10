@@ -291,7 +291,7 @@ impl IPFSStorage {
         let total_nodes = network.nodes.len();
         let active_nodes = network.nodes.values().filter(|n| n.active).count();
         let total_sales = network.sales.len();
-        let total_revenue: f64 = network.sales.iter().map(|s| s.price_gel).sum();
+        let total_revenue: f64 = network.sales.iter().map(|s| s.price_subunits as f64 / 100.0).sum();
         
         // Анализ по городам
         let mut city_stats: HashMap<String, (u32, f64)> = HashMap::new();

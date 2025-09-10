@@ -392,32 +392,27 @@ impl ApiVersionManager {
                     }),
                     responses: HashMap::from([
                         ("200".to_string(), OpenApiResponse {
-                            description: "Successful response".to_string(),
+                            description: "Success".to_string(),
                             content: Some(HashMap::from([
                                 ("application/json".to_string(), OpenApiMediaType {
                                     schema: Some(OpenApiSchema::Reference("#/components/schemas/ApiResponse".to_string())),
                                 })
                             ])),
-                        }),
-                        ("400".to_string(), OpenApiResponse {
-                            description: "Bad request".to_string(),
-                            content: Some(HashMap::from([
-                                ("application/json".to_string(), OpenApiMediaType {
-                                    schema: Some(OpenApiSchema::Reference("#/components/schemas/ErrorResponse".to_string())),
-                                })
-                            ])),
-                        }),
+                        })
                     ]),
                     security: Some(vec![HashMap::from([("ApiKeyAuth".to_string(), Vec::new())])]),
                 }),
+                get: None,
+                put: None,
+                delete: None,
             });
 
-            // Добавляем специфичные пути для разных модулей
+            // Пути для меню
             paths.insert("/api/v1/menu".to_string(), OpenApiPathItem {
                 get: Some(OpenApiOperation {
                     summary: "Get menu".to_string(),
-                    description: Some("Get the current menu".to_string()),
-                    operation_id: Some("get_menu".to_string()),
+                    description: Some("Get restaurant menu".to_string()),
+                    operation_id: Some("getMenu".to_string()),
                     tags: Some(vec!["Menu".to_string()]),
                     responses: HashMap::from([
                         ("200".to_string(), OpenApiResponse {
@@ -427,37 +422,56 @@ impl ApiVersionManager {
                                     schema: Some(OpenApiSchema::Reference("#/components/schemas/MenuResponse".to_string())),
                                 })
                             ])),
-                        }),
+                        })
                     ]),
+                    request_body: None,
+                    security: None,
                 }),
-            });
-
-            paths.insert("/api/v1/kyc".to_string(), OpenApiPathItem {
                 post: Some(OpenApiOperation {
-                    summary: "KYC operations".to_string(),
-                    description: Some("Perform KYC/AML operations".to_string()),
-                    operation_id: Some("kyc_operations".to_string()),
-                    tags: Some(vec!["KYC/AML".to_string()]),
-                    request_body: Some(OpenApiRequestBody {
-                        description: "KYC request".to_string(),
-                        content: HashMap::from([
-                            ("application/json".to_string(), OpenApiMediaType {
-                                schema: Some(OpenApiSchema::Reference("#/components/schemas/KYCRequest".to_string())),
-                            })
-                        ]),
-                        required: true,
-                    }),
+                    summary: "Update menu".to_string(),
+                    description: Some("Update restaurant menu".to_string()),
+                    operation_id: Some("updateMenu".to_string()),
+                    tags: Some(vec!["Menu".to_string()]),
                     responses: HashMap::from([
                         ("200".to_string(), OpenApiResponse {
-                            description: "KYC operation completed".to_string(),
+                            description: "Menu updated successfully".to_string(),
                             content: Some(HashMap::from([
                                 ("application/json".to_string(), OpenApiMediaType {
-                                    schema: Some(OpenApiSchema::Reference("#/components/schemas/KYCResponse".to_string())),
+                                    schema: Some(OpenApiSchema::Reference("#/components/schemas/MenuResponse".to_string())),
                                 })
                             ])),
-                        }),
+                        })
                     ]),
+                    request_body: None,
+                    security: None,
                 }),
+                put: None,
+                delete: None,
+            });
+
+            // Пути для KYC
+            paths.insert("/api/v1/kyc".to_string(), OpenApiPathItem {
+                post: Some(OpenApiOperation {
+                    summary: "Start KYC process".to_string(),
+                    description: Some("Start KYC verification process".to_string()),
+                    operation_id: Some("startKyc".to_string()),
+                    tags: Some(vec!["KYC".to_string()]),
+                    responses: HashMap::from([
+                        ("200".to_string(), OpenApiResponse {
+                            description: "KYC process started".to_string(),
+                            content: Some(HashMap::from([
+                                ("application/json".to_string(), OpenApiMediaType {
+                                    schema: Some(OpenApiSchema::Reference("#/components/schemas/KycResponse".to_string())),
+                                })
+                            ])),
+                        })
+                    ]),
+                    request_body: None,
+                    security: None,
+                }),
+                get: None,
+                put: None,
+                delete: None,
             });
         }
 
@@ -465,7 +479,7 @@ impl ApiVersionManager {
     }
 
     /// Генерация схем
-    fn generate_schemas(&self, version: &ApiVersion) -> Result<HashMap<String, OpenApiSchema>, String> {
+    fn generate_schemas(&self, _version: &ApiVersion) -> Result<HashMap<String, OpenApiSchema>, String> {
         let mut schemas = HashMap::new();
 
         // Базовые схемы
@@ -486,6 +500,8 @@ impl ApiVersionManager {
                 ("data".to_string(), OpenApiSchema::Object(OpenApiSchemaObject {
                     schema_type: Some("object".to_string()),
                     description: Some("Request data".to_string()),
+                    properties: None,
+                    required: None,
                 })),
             ])),
             required: Some(vec!["request_type".to_string()]),
@@ -501,11 +517,15 @@ impl ApiVersionManager {
                 ("data".to_string(), OpenApiSchema::Object(OpenApiSchemaObject {
                     schema_type: Some("object".to_string()),
                     description: Some("Response data".to_string()),
+                    properties: None,
+                    required: None,
                 })),
                 ("error".to_string(), OpenApiSchema::String(OpenApiSchemaString {
                     description: Some("Error message if any".to_string()),
+                    enum_values: None,
                 })),
             ])),
+            required: None,
         }));
 
         schemas.insert("ErrorResponse".to_string(), OpenApiSchema::Object(OpenApiSchemaObject {
@@ -514,12 +534,15 @@ impl ApiVersionManager {
             properties: Some(HashMap::from([
                 ("error".to_string(), OpenApiSchema::String(OpenApiSchemaString {
                     description: Some("Error message".to_string()),
+                    enum_values: None,
                 })),
                 ("code".to_string(), OpenApiSchema::String(OpenApiSchemaString {
                     description: Some("Error code".to_string()),
+                    enum_values: None,
                 })),
                 ("timestamp".to_string(), OpenApiSchema::String(OpenApiSchemaString {
                     description: Some("Error timestamp".to_string()),
+                    enum_values: None,
                 })),
             ])),
             required: Some(vec!["error".to_string()]),

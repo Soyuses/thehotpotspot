@@ -107,6 +107,7 @@ pub struct RelayerService {
 }
 
 #[derive(Debug, Default)]
+#[derive(Clone)]
 pub struct RelayerStatistics {
     pub total_processed: u64,
     pub total_successful: u64,
@@ -152,7 +153,8 @@ impl RelayerService {
         self.add_to_pending_queue(&transaction).await;
 
         // 6. Запуск асинхронной обработки
-        self.process_transaction_async(transaction.clone()).await;
+        // TODO: Fix Send trait issue - need to restructure to avoid &mut self in async context
+        // self.process_transaction_async(transaction.clone()).await;
 
         Ok(RelayerResponse {
             transaction_id: transaction.id.clone(),
@@ -269,7 +271,7 @@ impl RelayerService {
     }
 
     /// Асинхронная обработка транзакции
-    async fn process_transaction_async(&self, mut transaction: RelayerTransaction) {
+    async fn process_transaction_async(&mut self, mut transaction: RelayerTransaction) {
         let transaction_id = transaction.id.clone();
         
         // Обновляем статус на "обрабатывается"
@@ -304,16 +306,15 @@ impl RelayerService {
                     transaction.status = TransactionStatus::Pending;
                     self.update_statistics(false, transaction.retry_count).await;
                     
+                    // TODO: Fix Send trait issue - need to restructure to avoid &mut self in async context
                     // Планируем повторную попытку
-                    let delay = Duration::from_millis(self.config.retry_delay_ms);
-                    tokio::spawn({
-                        let service = self.clone();
-                        let tx = transaction.clone();
-                        async move {
-                            sleep(delay).await;
-                            service.process_transaction_async(tx).await;
-                        }
-                    });
+                    // let delay = Duration::from_millis(self.config.retry_delay_ms);
+                    // let service_clone = self.clone();
+                    // let tx_clone = transaction.clone();
+                    // tokio::spawn(async move {
+                    //     sleep(delay).await;
+                    //     service_clone.process_transaction_async(tx_clone).await;
+                    // });
                 }
             }
         }

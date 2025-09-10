@@ -196,7 +196,7 @@ impl ObservabilityManager {
 
     /// Логирование ошибки
     pub async fn log_error(&self, message: &str, module: &str, error: ErrorInfo, metadata: Option<HashMap<String, String>>) {
-        let mut log_entry = LogEntry {
+        let log_entry = LogEntry {
             timestamp: Utc::now(),
             level: LogLevel::Error,
             message: message.to_string(),
@@ -503,8 +503,8 @@ impl ObservabilityManager {
     fn start_background_tasks(&self) {
         let config = self.config.clone();
         let metrics = Arc::clone(&self.metrics);
-        let counters = Arc::clone(&self.counters);
-        let gauges = Arc::clone(&self.gauges);
+        let _counters = Arc::clone(&self.counters);
+        let _gauges = Arc::clone(&self.gauges);
 
         // Задача сбора метрик
         tokio::spawn(async move {
@@ -521,7 +521,8 @@ impl ObservabilityManager {
                     metrics_guard.push(metric);
                     
                     if metrics_guard.len() > config.metrics_buffer_size {
-                        metrics_guard.drain(0..metrics_guard.len() - config.metrics_buffer_size);
+                        let excess = metrics_guard.len() - config.metrics_buffer_size;
+            metrics_guard.drain(0..excess);
                     }
                 }
             }
