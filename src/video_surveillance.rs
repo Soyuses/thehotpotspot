@@ -7,14 +7,16 @@ use tokio::sync::RwLock;
 /// Типы камер в системе видеонаблюдения
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum CameraType {
-    /// Камеры вокруг заведения (внешние)
-    External,
-    /// Камеры в зонах производства
-    Production,
-    /// Камеры для откровений (специальная зона)
-    Confession,
+    /// Камеры безопасности вокруг торговой точки
+    Security,
+    /// Камеры на кухне для трансляций
+    Kitchen,
     /// Камеры за столами посетителей
     CustomerTable,
+    /// Камеры в зонах производства (устаревший тип)
+    Production,
+    /// Камеры для откровений (устаревший тип)
+    Confession,
 }
 
 /// Статус камеры
@@ -92,6 +94,13 @@ pub struct VideoSurveillanceSystem {
     consent_records: Arc<RwLock<HashMap<String, VideoConsent>>>,
     face_replacement_images: Arc<RwLock<HashMap<String, Vec<u8>>>>,
     streaming_config: StreamingConfig,
+    // Новые поля для расширенной функциональности
+    security_alerts: Arc<RwLock<HashMap<String, SecurityAlert>>>,
+    security_mode: Arc<RwLock<SecurityMode>>,
+    kitchen_streams: Arc<RwLock<HashMap<String, KitchenStreamConfig>>>,
+    chef_authorizations: Arc<RwLock<HashMap<String, ChefAuthorization>>>,
+    customer_streams: Arc<RwLock<HashMap<String, CustomerStream>>>,
+    customer_consents: Arc<RwLock<HashMap<String, CustomerStreamConsent>>>,
 }
 
 /// Конфигурация стриминга
@@ -115,6 +124,143 @@ pub enum StreamQuality {
     High,   // 1080p
 }
 
+/// Режим работы камеры безопасности
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SecurityMode {
+    /// Рабочие часы - запись на сервер + трансляция с размытием лиц
+    WorkingHours,
+    /// Нерабочие часы - только уведомления при приближении
+    AfterHours,
+}
+
+/// Уведомление о безопасности
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SecurityAlert {
+    pub alert_id: String,
+    pub camera_id: String,
+    pub alert_type: SecurityAlertType,
+    pub timestamp: u64,
+    pub severity: AlertSeverity,
+    pub location: String,
+    pub description: String,
+    pub image_data: Option<Vec<u8>>,
+    pub acknowledged: bool,
+    pub acknowledged_by: Option<String>,
+    pub acknowledged_at: Option<u64>,
+}
+
+/// Тип уведомления безопасности
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum SecurityAlertType {
+    /// Обнаружено движение в нерабочее время
+    MotionDetected,
+    /// Обнаружен человек
+    PersonDetected,
+    /// Подозрительная активность
+    SuspiciousActivity,
+    /// Нарушение периметра
+    PerimeterBreach,
+}
+
+/// Уровень серьезности уведомления
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum AlertSeverity {
+    Low,
+    Medium,
+    High,
+    Critical,
+}
+
+/// Конфигурация трансляции кухни
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct KitchenStreamConfig {
+    pub stream_id: String,
+    pub active_cameras: Vec<String>,
+    pub layout: StreamLayout,
+    pub chef_overlay: bool,
+    pub chef_name: Option<String>,
+    pub quality: StreamQuality,
+    pub platforms: Vec<StreamingPlatform>,
+}
+
+/// Платформы для стриминга
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum StreamingPlatform {
+    Twitch,
+    YouTube,
+    Facebook,
+    Instagram,
+}
+
+/// Макет трансляции
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum StreamLayout {
+    /// Одна камера
+    Single,
+    /// Две камеры рядом
+    SideBySide,
+    /// Четыре камеры в сетке 2x2
+    Grid2x2,
+    /// Основная камера + маленькая в углу
+    PictureInPicture,
+    /// Кастомный макет
+    Custom(Vec<StreamRegion>),
+}
+
+/// Область в макете трансляции
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StreamRegion {
+    pub camera_id: String,
+    pub x: f32,      // 0.0 - 1.0
+    pub y: f32,      // 0.0 - 1.0
+    pub width: f32,  // 0.0 - 1.0
+    pub height: f32, // 0.0 - 1.0
+    pub z_index: u32,
+}
+
+/// Авторизация повара для трансляции
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChefAuthorization {
+    pub chef_id: String,
+    pub wallet_address: String,
+    pub qr_code: String,
+    pub authorized_at: u64,
+    pub expires_at: u64,
+    pub camera_id: String,
+    pub chef_name: String,
+    pub overlay_enabled: bool,
+}
+
+/// Согласие посетителя на трансляцию
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerStreamConsent {
+    pub customer_id: String,
+    pub table_id: String,
+    pub camera_id: String,
+    pub consent_given: bool,
+    pub consent_timestamp: u64,
+    pub customer_name: String,
+    pub privacy_policy_accepted: bool,
+    pub data_processing_consent: bool,
+    pub streaming_consent: bool,
+    pub ip_address: String,
+    pub user_agent: String,
+}
+
+/// Активная трансляция посетителя
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerStream {
+    pub stream_id: String,
+    pub customer_id: String,
+    pub table_id: String,
+    pub camera_id: String,
+    pub customer_name: String,
+    pub start_time: u64,
+    pub is_active: bool,
+    pub consent: CustomerStreamConsent,
+    pub overlay_enabled: bool,
+}
+
 impl VideoSurveillanceSystem {
     pub fn new(streaming_config: StreamingConfig) -> Self {
         Self {
@@ -123,6 +269,12 @@ impl VideoSurveillanceSystem {
             consent_records: Arc::new(RwLock::new(HashMap::new())),
             face_replacement_images: Arc::new(RwLock::new(HashMap::new())),
             streaming_config,
+            security_alerts: Arc::new(RwLock::new(HashMap::new())),
+            security_mode: Arc::new(RwLock::new(SecurityMode::WorkingHours)),
+            kitchen_streams: Arc::new(RwLock::new(HashMap::new())),
+            chef_authorizations: Arc::new(RwLock::new(HashMap::new())),
+            customer_streams: Arc::new(RwLock::new(HashMap::new())),
+            customer_consents: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -373,6 +525,329 @@ impl VideoSurveillanceSystem {
         }
         
         stats
+    }
+
+    // ===== НОВЫЕ МЕТОДЫ ДЛЯ РАСШИРЕННОЙ ФУНКЦИОНАЛЬНОСТИ =====
+
+    /// Установить режим работы системы безопасности
+    pub async fn set_security_mode(&self, mode: SecurityMode) {
+        let mut security_mode = self.security_mode.write().await;
+        *security_mode = mode;
+    }
+
+    /// Получить текущий режим безопасности
+    pub async fn get_security_mode(&self) -> SecurityMode {
+        let security_mode = self.security_mode.read().await;
+        security_mode.clone()
+    }
+
+    /// Обработать движение с камеры безопасности
+    pub async fn handle_security_motion(&self, camera_id: &str, frame_data: &[u8]) -> Result<Option<SecurityAlert>, String> {
+        let cameras = self.cameras.read().await;
+        let camera = cameras.get(camera_id)
+            .ok_or_else(|| format!("Camera {} not found", camera_id))?;
+
+        if camera.camera_type != CameraType::Security {
+            return Err("Camera is not a security camera".to_string());
+        }
+
+        let security_mode = self.security_mode.read().await;
+        
+        match *security_mode {
+            SecurityMode::WorkingHours => {
+                // В рабочие часы - записываем и отправляем в трансляцию с размытием лиц
+                self.record_security_footage(camera_id, frame_data).await?;
+                Ok(None) // Нет уведомлений в рабочие часы
+            },
+            SecurityMode::AfterHours => {
+                // В нерабочее время - создаем уведомление
+                let alert = self.create_security_alert(
+                    camera_id,
+                    SecurityAlertType::MotionDetected,
+                    AlertSeverity::Medium,
+                    "Motion detected after hours".to_string(),
+                    Some(frame_data.to_vec()),
+                ).await?;
+                Ok(Some(alert))
+            }
+        }
+    }
+
+    /// Создать уведомление безопасности
+    async fn create_security_alert(
+        &self,
+        camera_id: &str,
+        alert_type: SecurityAlertType,
+        severity: AlertSeverity,
+        description: String,
+        image_data: Option<Vec<u8>>,
+    ) -> Result<SecurityAlert, String> {
+        let cameras = self.cameras.read().await;
+        let camera = cameras.get(camera_id)
+            .ok_or_else(|| format!("Camera {} not found", camera_id))?;
+
+        let alert_id = format!("ALERT_{}_{}", camera_id, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+        
+        let alert = SecurityAlert {
+            alert_id: alert_id.clone(),
+            camera_id: camera_id.to_string(),
+            alert_type,
+            timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            severity,
+            location: camera.location.clone(),
+            description,
+            image_data,
+            acknowledged: false,
+            acknowledged_by: None,
+            acknowledged_at: None,
+        };
+
+        let mut alerts = self.security_alerts.write().await;
+        alerts.insert(alert_id, alert.clone());
+
+        Ok(alert)
+    }
+
+    /// Записать кадр безопасности
+    async fn record_security_footage(&self, camera_id: &str, frame_data: &[u8]) -> Result<(), String> {
+        // Здесь должна быть логика записи на защищенный сервер
+        // Пока что просто логируем
+        println!("Recording security footage from camera {}: {} bytes", camera_id, frame_data.len());
+        Ok(())
+    }
+
+    /// Получить все активные уведомления безопасности
+    pub async fn get_security_alerts(&self) -> Vec<SecurityAlert> {
+        let alerts = self.security_alerts.read().await;
+        alerts.values().cloned().collect()
+    }
+
+    /// Подтвердить уведомление безопасности
+    pub async fn acknowledge_security_alert(&self, alert_id: &str, acknowledged_by: &str) -> Result<(), String> {
+        let mut alerts = self.security_alerts.write().await;
+        if let Some(alert) = alerts.get_mut(alert_id) {
+            alert.acknowledged = true;
+            alert.acknowledged_by = Some(acknowledged_by.to_string());
+            alert.acknowledged_at = Some(SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+            Ok(())
+        } else {
+            Err(format!("Alert {} not found", alert_id))
+        }
+    }
+
+    /// Создать трансляцию кухни
+    pub async fn create_kitchen_stream(&self, config: KitchenStreamConfig) -> Result<(), String> {
+        // Проверяем, что все камеры существуют и являются кухонными
+        let cameras = self.cameras.read().await;
+        for camera_id in &config.active_cameras {
+            let camera = cameras.get(camera_id)
+                .ok_or_else(|| format!("Camera {} not found", camera_id))?;
+            if camera.camera_type != CameraType::Kitchen {
+                return Err(format!("Camera {} is not a kitchen camera", camera_id));
+            }
+        }
+
+        let mut streams = self.kitchen_streams.write().await;
+        streams.insert(config.stream_id.clone(), config);
+        Ok(())
+    }
+
+    /// Авторизовать повара для трансляции
+    pub async fn authorize_chef(&self, chef_id: &str, wallet_address: &str, camera_id: &str, chef_name: &str) -> Result<ChefAuthorization, String> {
+        // Проверяем, что камера существует и является кухонной
+        let cameras = self.cameras.read().await;
+        let camera = cameras.get(camera_id)
+            .ok_or_else(|| format!("Camera {} not found", camera_id))?;
+        if camera.camera_type != CameraType::Kitchen {
+            return Err("Camera is not a kitchen camera".to_string());
+        }
+
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let qr_code = format!("CHEF_AUTH_{}_{}_{}", chef_id, wallet_address, now);
+
+        let authorization = ChefAuthorization {
+            chef_id: chef_id.to_string(),
+            wallet_address: wallet_address.to_string(),
+            qr_code: qr_code.clone(),
+            authorized_at: now,
+            expires_at: now + 86400, // 24 часа
+            camera_id: camera_id.to_string(),
+            chef_name: chef_name.to_string(),
+            overlay_enabled: true,
+        };
+
+        let mut authorizations = self.chef_authorizations.write().await;
+        authorizations.insert(chef_id.to_string(), authorization.clone());
+
+        Ok(authorization)
+    }
+
+    /// Проверить авторизацию повара по QR-коду
+    pub async fn verify_chef_qr(&self, qr_code: &str) -> Result<ChefAuthorization, String> {
+        let authorizations = self.chef_authorizations.read().await;
+        
+        for auth in authorizations.values() {
+            if auth.qr_code == qr_code {
+                let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+                if now <= auth.expires_at {
+                    return Ok(auth.clone());
+                } else {
+                    return Err("Authorization expired".to_string());
+                }
+            }
+        }
+        
+        Err("Invalid QR code".to_string())
+    }
+
+    /// Получить согласие посетителя на трансляцию
+    pub async fn request_customer_stream_consent(
+        &self,
+        customer_id: &str,
+        table_id: &str,
+        camera_id: &str,
+        customer_name: &str,
+        ip_address: &str,
+        user_agent: &str,
+    ) -> Result<CustomerStreamConsent, String> {
+        // Проверяем, что камера существует и является камерой стола
+        let cameras = self.cameras.read().await;
+        let camera = cameras.get(camera_id)
+            .ok_or_else(|| format!("Camera {} not found", camera_id))?;
+        if camera.camera_type != CameraType::CustomerTable {
+            return Err("Camera is not a customer table camera".to_string());
+        }
+
+        let consent = CustomerStreamConsent {
+            customer_id: customer_id.to_string(),
+            table_id: table_id.to_string(),
+            camera_id: camera_id.to_string(),
+            consent_given: false,
+            consent_timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            customer_name: customer_name.to_string(),
+            privacy_policy_accepted: false,
+            data_processing_consent: false,
+            streaming_consent: false,
+            ip_address: ip_address.to_string(),
+            user_agent: user_agent.to_string(),
+        };
+
+        let mut consents = self.customer_consents.write().await;
+        consents.insert(customer_id.to_string(), consent.clone());
+
+        Ok(consent)
+    }
+
+    /// Подтвердить согласие посетителя на трансляцию
+    pub async fn confirm_customer_stream_consent(
+        &self,
+        customer_id: &str,
+        privacy_policy_accepted: bool,
+        data_processing_consent: bool,
+        streaming_consent: bool,
+    ) -> Result<CustomerStreamConsent, String> {
+        let mut consents = self.customer_consents.write().await;
+        if let Some(consent) = consents.get_mut(customer_id) {
+            consent.consent_given = true;
+            consent.privacy_policy_accepted = privacy_policy_accepted;
+            consent.data_processing_consent = data_processing_consent;
+            consent.streaming_consent = streaming_consent;
+            consent.consent_timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+            Ok(consent.clone())
+        } else {
+            Err(format!("Consent for customer {} not found", customer_id))
+        }
+    }
+
+    /// Начать трансляцию посетителя
+    pub async fn start_customer_stream(&self, customer_id: &str) -> Result<CustomerStream, String> {
+        let consents = self.customer_consents.read().await;
+        let consent = consents.get(customer_id)
+            .ok_or_else(|| format!("Consent for customer {} not found", customer_id))?;
+
+        if !consent.consent_given || !consent.streaming_consent {
+            return Err("Customer has not given streaming consent".to_string());
+        }
+
+        let stream_id = format!("CUSTOMER_STREAM_{}_{}", customer_id, SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs());
+        
+        let stream = CustomerStream {
+            stream_id: stream_id.clone(),
+            customer_id: customer_id.to_string(),
+            table_id: consent.table_id.clone(),
+            camera_id: consent.camera_id.clone(),
+            customer_name: consent.customer_name.clone(),
+            start_time: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs(),
+            is_active: true,
+            consent: consent.clone(),
+            overlay_enabled: true,
+        };
+
+        let mut streams = self.customer_streams.write().await;
+        streams.insert(stream_id, stream.clone());
+
+        Ok(stream)
+    }
+
+    /// Остановить трансляцию посетителя
+    pub async fn stop_customer_stream(&self, customer_id: &str) -> Result<(), String> {
+        let mut streams = self.customer_streams.write().await;
+        if let Some(stream) = streams.get_mut(customer_id) {
+            stream.is_active = false;
+            Ok(())
+        } else {
+            Err(format!("Stream for customer {} not found", customer_id))
+        }
+    }
+
+    /// Получить все активные трансляции посетителей
+    pub async fn get_active_customer_streams(&self) -> Vec<CustomerStream> {
+        let streams = self.customer_streams.read().await;
+        streams.values().filter(|s| s.is_active).cloned().collect()
+    }
+
+    /// Получить все трансляции кухни
+    pub async fn get_kitchen_streams(&self) -> Vec<KitchenStreamConfig> {
+        let streams = self.kitchen_streams.read().await;
+        streams.values().cloned().collect()
+    }
+
+    /// Обновить макет трансляции кухни
+    pub async fn update_kitchen_stream_layout(&self, stream_id: &str, layout: StreamLayout) -> Result<(), String> {
+        let mut streams = self.kitchen_streams.write().await;
+        if let Some(stream) = streams.get_mut(stream_id) {
+            stream.layout = layout;
+            Ok(())
+        } else {
+            Err(format!("Kitchen stream {} not found", stream_id))
+        }
+    }
+
+    /// Переключить камеру в трансляции кухни
+    pub async fn switch_kitchen_camera(&self, stream_id: &str, camera_id: &str) -> Result<(), String> {
+        let mut streams = self.kitchen_streams.write().await;
+        if let Some(stream) = streams.get_mut(stream_id) {
+            // Проверяем, что камера существует и является кухонной
+            let cameras = self.cameras.read().await;
+            let camera = cameras.get(camera_id)
+                .ok_or_else(|| format!("Camera {} not found", camera_id))?;
+            if camera.camera_type != CameraType::Kitchen {
+                return Err("Camera is not a kitchen camera".to_string());
+            }
+
+            // Если это одиночная камера, заменяем активную камеру
+            if stream.active_cameras.len() == 1 {
+                stream.active_cameras[0] = camera_id.to_string();
+            } else {
+                // Для многокамерных макетов добавляем камеру
+                if !stream.active_cameras.contains(&camera_id.to_string()) {
+                    stream.active_cameras.push(camera_id.to_string());
+                }
+            }
+            Ok(())
+        } else {
+            Err(format!("Kitchen stream {} not found", stream_id))
+        }
     }
 }
 

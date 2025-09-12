@@ -38,6 +38,7 @@ impl Default for DatabaseConfig {
 }
 
 /// Менеджер базы данных
+#[derive(Clone)]
 pub struct DatabaseManager {
     client: Arc<Mutex<Client>>,
     config: DatabaseConfig,

@@ -129,6 +129,7 @@ impl Default for ObservabilityConfig {
 }
 
 /// Менеджер observability
+#[derive(Clone)]
 pub struct ObservabilityManager {
     config: ObservabilityConfig,
     logs: Arc<RwLock<Vec<LogEntry>>>,

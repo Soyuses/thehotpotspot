@@ -29,6 +29,7 @@ qrcode = "0.13"
 tokio-test = "0.4"
 proptest = "1.4"
 quickcheck = "1.0"
+quickcheck_macros = "1.0"
 criterion = { version = "0.5", features = ["html_reports"] }
 mockall = "0.12"
 tempfile = "3.0"

@@ -27,7 +27,8 @@ async fn test_database_connection() {
     let db = result.unwrap();
     
     // Тестируем подключение
-    let connection_result = db.test_connection().await;
+    // Тест подключения к базе данных
+    let connection_result = db.get_database_stats().await;
     assert!(connection_result.is_ok(), "Не удалось подключиться к базе данных");
 }
 

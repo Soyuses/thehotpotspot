@@ -61,6 +61,162 @@ impl StreamQuality {
     }
 }
 
+/// Расширенная конфигурация стриминга
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EnhancedStreamingConfig {
+    pub twitch: TwitchConfig,
+    pub youtube: YouTubeConfig,
+    pub facebook: FacebookConfig,
+    pub instagram: InstagramConfig,
+    pub default_quality: StreamQuality,
+    pub max_concurrent_streams: u32,
+    pub auto_switch_cameras: bool,
+    pub face_blurring_enabled: bool,
+    pub overlay_settings: OverlaySettings,
+}
+
+/// Конфигурация Facebook
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FacebookConfig {
+    pub app_id: String,
+    pub app_secret: String,
+    pub access_token: String,
+    pub page_id: String,
+    pub stream_key: String,
+}
+
+/// Конфигурация Instagram
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InstagramConfig {
+    pub client_id: String,
+    pub client_secret: String,
+    pub access_token: String,
+    pub user_id: String,
+    pub stream_key: String,
+}
+
+/// Настройки оверлея
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OverlaySettings {
+    pub show_chef_name: bool,
+    pub show_customer_name: bool,
+    pub show_timestamp: bool,
+    pub show_logo: bool,
+    pub logo_position: OverlayPosition,
+    pub text_color: String,
+    pub background_color: String,
+    pub font_size: u32,
+}
+
+/// Позиция оверлея
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum OverlayPosition {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+    Center,
+}
+
+/// Активная трансляция
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActiveStream {
+    pub stream_id: String,
+    pub stream_type: StreamType,
+    pub platforms: Vec<StreamingPlatform>,
+    pub quality: StreamQuality,
+    pub layout: StreamLayout,
+    pub active_cameras: Vec<String>,
+    pub start_time: u64,
+    pub is_live: bool,
+    pub viewer_count: u32,
+    pub chef_overlay: Option<ChefOverlay>,
+    pub customer_overlays: Vec<CustomerOverlay>,
+}
+
+/// Тип трансляции
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum StreamType {
+    Kitchen,
+    Customer,
+    Security,
+    Mixed,
+}
+
+/// Платформы для стриминга
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum StreamingPlatform {
+    Twitch,
+    YouTube,
+    Facebook,
+    Instagram,
+}
+
+/// Макет трансляции
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum StreamLayout {
+    Single,
+    SideBySide,
+    Grid2x2,
+    Grid3x3,
+    PictureInPicture,
+    Custom(Vec<StreamRegion>),
+}
+
+/// Область в макете трансляции
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct StreamRegion {
+    pub camera_id: String,
+    pub x: f32,
+    pub y: f32,
+    pub width: f32,
+    pub height: f32,
+    pub z_index: u32,
+}
+
+/// Оверлей повара
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChefOverlay {
+    pub chef_id: String,
+    pub chef_name: String,
+    pub camera_id: String,
+    pub position: OverlayPosition,
+    pub is_active: bool,
+}
+
+/// Оверлей посетителя
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CustomerOverlay {
+    pub customer_id: String,
+    pub customer_name: String,
+    pub table_id: String,
+    pub camera_id: String,
+    pub position: OverlayPosition,
+    pub is_active: bool,
+}
+
+/// Статистика трансляции
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StreamStatistics {
+    pub stream_id: String,
+    pub total_viewers: u32,
+    pub peak_viewers: u32,
+    pub average_viewers: u32,
+    pub total_duration: u64,
+    pub platform_stats: HashMap<StreamingPlatform, PlatformStats>,
+}
+
+/// Статистика платформы
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlatformStats {
+    pub platform: StreamingPlatform,
+    pub viewers: u32,
+    pub likes: u32,
+    pub comments: u32,
+    pub shares: u32,
+    pub engagement_rate: f32,
+}
+
 /// Статус стрима
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum StreamStatus {
@@ -87,13 +243,6 @@ pub struct StreamInfo {
     pub error_message: Option<String>,
 }
 
-/// Платформы стриминга
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub enum StreamingPlatform {
-    Twitch,
-    YouTube,
-    Both,
-}
 
 /// Менеджер стриминга
 pub struct StreamingManager {
@@ -191,37 +340,15 @@ impl StreamingManager {
                     }
                 }
             },
-            StreamingPlatform::Both => {
-                // Запускаем на обеих платформах
-                let twitch_result = self.twitch_client.start_stream(&stream_id, &quality).await;
-                let youtube_result = self.youtube_client.start_stream(&stream_id, &quality).await;
-
-                if twitch_result.is_ok() && youtube_result.is_ok() {
-                    let twitch_info = twitch_result.unwrap();
-                    let youtube_info = youtube_result.unwrap();
-                    
-                    stream_info.stream_url = Some(format!("Twitch: {}, YouTube: {}", 
-                        twitch_info.stream_url, youtube_info.stream_url));
-                    stream_info.chat_url = Some(format!("Twitch: {}, YouTube: {}", 
-                        twitch_info.chat_url, youtube_info.chat_url));
-                    stream_info.status = StreamStatus::Live;
-                    stream_info.start_time = Some(
-                        std::time::SystemTime::now()
-                            .duration_since(std::time::UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs()
-                    );
-                } else {
-                    stream_info.status = StreamStatus::Error;
-                    let mut errors = Vec::new();
-                    if let Err(e) = twitch_result {
-                        errors.push(format!("Twitch: {}", e));
-                    }
-                    if let Err(e) = youtube_result {
-                        errors.push(format!("YouTube: {}", e));
-                    }
-                    stream_info.error_message = Some(errors.join(", "));
-                }
+            StreamingPlatform::Facebook => {
+                // Логика для Facebook (заглушка)
+                stream_info.status = StreamStatus::Error;
+                stream_info.error_message = Some("Facebook streaming not implemented yet".to_string());
+            },
+            StreamingPlatform::Instagram => {
+                // Логика для Instagram (заглушка)
+                stream_info.status = StreamStatus::Error;
+                stream_info.error_message = Some("Instagram streaming not implemented yet".to_string());
             }
         }
 
@@ -257,13 +384,13 @@ impl StreamingManager {
                         eprintln!("Error stopping YouTube stream: {}", e);
                     }
                 },
-                StreamingPlatform::Both => {
-                    if let Err(e) = self.twitch_client.stop_stream(&stream_id).await {
-                        eprintln!("Error stopping Twitch stream: {}", e);
-                    }
-                    if let Err(e) = self.youtube_client.stop_stream(&stream_id).await {
-                        eprintln!("Error stopping YouTube stream: {}", e);
-                    }
+                StreamingPlatform::Facebook => {
+                    // Facebook streaming not implemented yet
+                    eprintln!("Facebook streaming not implemented yet");
+                },
+                StreamingPlatform::Instagram => {
+                    // Instagram streaming not implemented yet
+                    eprintln!("Instagram streaming not implemented yet");
                 }
             }
 
@@ -310,7 +437,7 @@ impl StreamingManager {
     }
 
     /// Получить статистику по платформам
-    pub async fn get_platform_stats(&self) -> HashMap<String, PlatformStats> {
+    pub async fn get_platform_stats(&self) -> HashMap<StreamingPlatform, PlatformStats> {
         let active_streams = self.active_streams.read().await;
         let mut stats = HashMap::new();
 
@@ -329,38 +456,38 @@ impl StreamingManager {
                         youtube_streams += 1;
                         total_viewers += stream.viewer_count;
                     },
-                    StreamingPlatform::Both => {
-                        twitch_streams += 1;
-                        youtube_streams += 1;
-                        total_viewers += stream.viewer_count;
+                    StreamingPlatform::Facebook => {
+                        // Facebook streaming not implemented yet
+                    },
+                    StreamingPlatform::Instagram => {
+                        // Instagram streaming not implemented yet
                     }
                 }
             }
         }
 
-        stats.insert("twitch".to_string(), PlatformStats {
-            active_streams: twitch_streams,
-            total_viewers: total_viewers / 2, // Примерное распределение
-            platform: "Twitch".to_string(),
+        stats.insert(StreamingPlatform::Twitch, PlatformStats {
+            platform: StreamingPlatform::Twitch,
+            viewers: total_viewers / 2, // Примерное распределение
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            engagement_rate: 0.0,
         });
 
-        stats.insert("youtube".to_string(), PlatformStats {
-            active_streams: youtube_streams,
-            total_viewers: total_viewers / 2,
-            platform: "YouTube".to_string(),
+        stats.insert(StreamingPlatform::YouTube, PlatformStats {
+            platform: StreamingPlatform::YouTube,
+            viewers: total_viewers / 2,
+            likes: 0,
+            comments: 0,
+            shares: 0,
+            engagement_rate: 0.0,
         });
 
         stats
     }
 }
 
-/// Статистика платформы
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PlatformStats {
-    pub active_streams: u32,
-    pub total_viewers: u32,
-    pub platform: String,
-}
 
 /// Клиент для работы с Twitch API
 pub struct TwitchClient {

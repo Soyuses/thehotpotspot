@@ -8,35 +8,33 @@ proptest! {
     #[test]
     fn test_franchise_network_consistency(
         nodes in prop::collection::vec(
-            (1u64..1000u64, prop::sample::select(vec![NodeType::Restaurant, NodeType::FoodTruck, NodeType::Warehouse])),
+            (1u64..1000u64, prop::sample::select(vec![NodeType::Owner, NodeType::Franchise])),
             1..50
         )
     ) {
-        let mut network = FranchiseNetwork::new();
+        let mut network = FranchiseNetwork::new("master_owner".to_string());
         
         // Добавляем узлы
         for (node_id, node_type) in nodes {
             let node = FranchiseNode {
-                id: node_id,
-                name: format!("Node_{}", node_id),
-                node_type: node_type.clone(),
-                location: format!("Location_{}", node_id),
-                capacity: 100,
-                current_load: 0,
-                is_active: true,
-                created_at: std::time::SystemTime::now(),
-                last_updated: std::time::SystemTime::now(),
+                node_id: node_id.to_string(),
+                owner_address: format!("owner_{}", node_id),
+                city: format!("City_{}", node_id),
+                active: true,
+                registered_at: std::time::SystemTime::now(),
+                pos_systems: vec![],
             };
             
-            network.add_node(node);
+            network.register_node(node.node_id.clone(), node.owner_address.clone(), node.city.clone());
         }
         
         // Проверяем, что все узлы добавлены
-        assert_eq!(network.get_all_nodes().len(), nodes.len());
+        let stats = network.get_network_stats();
+        assert_eq!(stats.total_nodes, nodes.len() as u32);
         
         // Проверяем, что каждый узел можно найти
         for (node_id, _) in &nodes {
-            assert!(network.get_node(*node_id).is_some());
+            assert!(network.get_node_info(&node_id.to_string()).is_some());
         }
     }
 
@@ -45,13 +43,13 @@ proptest! {
         seed_phrase in "[a-z ]{10,100}",
         wallet_count in 1u32..20u32
     ) {
-        let mut wallet_manager = HDWalletManager::new();
+        let mut wallet_manager = HDWalletManager::new("test_seed".to_string());
         
         // Генерируем кошельки
         let mut wallets = Vec::new();
         for i in 0..wallet_count {
             let wallet_type = if i % 2 == 0 { WalletType::Node } else { WalletType::Check };
-            let wallet = wallet_manager.generate_wallet(&seed_phrase, wallet_type);
+            let wallet = wallet_manager.generate_node_wallet(&seed_phrase, wallet_type);
             wallets.push(wallet);
         }
         
@@ -85,21 +83,21 @@ proptest! {
             let user_id = format!("user_{}_{}", first_name, last_name);
             
             // Регистрируем пользователя
-            kyc_manager.register_user(
-                &user_id,
-                &format!("{}@example.com", user_id),
-                &first_name,
-                &last_name,
-                Some(nationality.clone())
-            ).unwrap();
+            let user_data = UserRegistrationData {
+                user_id: user_id.clone(),
+                email: format!("{}@example.com", user_id),
+                first_name: first_name.clone(),
+                last_name: last_name.clone(),
+                nationality: Some(nationality.clone()),
+            };
+            kyc_manager.register_user(user_data).unwrap();
             
             // Начинаем KYC процесс
             kyc_manager.start_kyc_process(&user_id, kyc_level.clone()).unwrap();
             
             // Проверяем, что пользователь зарегистрирован
             let user = kyc_manager.get_user(&user_id).unwrap();
-            assert!(user.is_some());
-            let user_data = user.unwrap();
+            let user_data = user;
             assert_eq!(user_data.first_name, first_name);
             assert_eq!(user_data.last_name, last_name);
             assert_eq!(user_data.kyc_level, kyc_level);
@@ -161,7 +159,7 @@ proptest! {
 mod quickcheck_tests {
     use quickcheck::TestResult;
     use quickcheck_macros::quickcheck;
-    use blockchain_project::config::Amount;
+    // use blockchain_project::config::Amount; // Amount не существует в config
 
     #[quickcheck]
     fn test_amount_conversion_roundtrip(amount: u128) -> TestResult {
