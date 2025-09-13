@@ -402,7 +402,7 @@ mod tests {
             vec!["camera1".to_string()],
         ).await;
 
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Failed to create kitchen stream: {:?}", result);
         let stream = result.unwrap();
         assert_eq!(stream.stream_id, "test_stream");
         assert_eq!(stream.stream_type, StreamType::Kitchen);
@@ -414,16 +414,18 @@ mod tests {
         let manager = EnhancedStreamingManager::new(create_test_config());
         
         // Создаем трансляцию
-        manager.create_kitchen_stream(
+        let create_result = manager.create_kitchen_stream(
             "test_stream",
             vec![StreamingPlatform::Twitch],
             StreamQuality::Medium,
             StreamLayout::Single,
             vec!["camera1".to_string()],
-        ).await.unwrap();
+        ).await;
+
+        assert!(create_result.is_ok(), "Failed to create kitchen stream: {:?}", create_result);
 
         // Добавляем оверлей повара
-        let result = manager.add_chef_overlay(
+        let overlay_result = manager.add_chef_overlay(
             "test_stream",
             "chef1",
             "Chef John",
@@ -431,10 +433,12 @@ mod tests {
             OverlayPosition::BottomLeft,
         ).await;
 
-        assert!(result.is_ok());
+        assert!(overlay_result.is_ok(), "Failed to add chef overlay: {:?}", overlay_result);
 
         // Проверяем, что оверлей добавлен
-        let stream = manager.get_stream("test_stream").await.unwrap();
+        let stream = manager.get_stream("test_stream").await;
+        assert!(stream.is_some(), "Stream not found");
+        let stream = stream.unwrap();
         assert!(stream.chef_overlay.is_some());
         let overlay = stream.chef_overlay.unwrap();
         assert_eq!(overlay.chef_name, "Chef John");
@@ -445,25 +449,24 @@ mod tests {
         let manager = EnhancedStreamingManager::new(create_test_config());
         
         // Создаем трансляцию
-        manager.create_kitchen_stream(
+        let result = manager.create_kitchen_stream(
             "test_stream",
             vec![StreamingPlatform::Twitch],
             StreamQuality::Medium,
             StreamLayout::Single,
             vec!["camera1".to_string()],
-        ).await.unwrap();
+        ).await;
+        
+        assert!(result.is_ok(), "Failed to create kitchen stream");
 
         // Переключаем камеру
-        let result = manager.switch_camera(
-            "test_stream",
-            "camera2",
-            None,
-        ).await;
-
-        assert!(result.is_ok());
+        let switch_result = manager.switch_camera("test_stream", "camera2", None).await;
+        assert!(switch_result.is_ok(), "Failed to switch camera: {:?}", switch_result);
 
         // Проверяем, что камера переключена
-        let stream = manager.get_stream("test_stream").await.unwrap();
+        let stream = manager.get_stream("test_stream").await;
+        assert!(stream.is_some(), "Stream not found");
+        let stream = stream.unwrap();
         assert_eq!(stream.active_cameras[0], "camera2");
     }
 

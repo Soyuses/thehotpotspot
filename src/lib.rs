@@ -20,3 +20,5 @@ pub mod database;
 pub mod observability;
 pub mod api_versioning;
 pub mod chef_arm;
+pub mod error_notification_system;
+pub mod test_coverage_analyzer;

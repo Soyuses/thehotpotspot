@@ -117,6 +117,14 @@ use blockchain_project::api_versioning::{
     VersionStatistics, OpenApiSpec, ChangeType, ChangeImpact
 };
 
+// Импорты для системы уведомлений об ошибках
+use blockchain_project::error_notification_system::{
+    ErrorNotificationSystem, NotificationConfig, NotificationChannel, ErrorNotificationType
+};
+
+// Импорты для анализатора покрытия тестами
+use blockchain_project::test_coverage_analyzer::TestCoverageAnalyzer;
+
 // Utility Token for voting
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct UtilityToken {
@@ -790,6 +798,8 @@ pub struct Blockchain {
     observability_manager: ObservabilityManager, // Observability менеджер
     api_version_manager: ApiVersionManager, // API versioning менеджер
     chef_arm_manager: ChefARMManager, // ARM повара менеджер
+    error_notification_system: ErrorNotificationSystem, // Система уведомлений об ошибках
+    test_coverage_analyzer: TestCoverageAnalyzer, // Анализатор покрытия тестами
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -848,6 +858,22 @@ impl Blockchain {
             observability_manager: ObservabilityManager::new(ObservabilityConfig::default()),
             api_version_manager: ApiVersionManager::new(ApiConfig::default()),
             chef_arm_manager: ChefARMManager::new(),
+            error_notification_system: {
+                let config = NotificationConfig {
+                    owner_arm_id: "owner_arm_123".to_string(),
+                    channels: vec![
+                        NotificationChannel::Email("owner@hotpot.com".to_string()),
+                        NotificationChannel::Telegram("123456789".to_string()),
+                        NotificationChannel::Slack("https://hooks.slack.com/services/...".to_string()),
+                    ],
+                    critical_threshold: 0.00001, // 0.001%
+                    test_coverage_threshold: 1.0, // 100%
+                    notification_cooldown: 300, // 5 минут
+                    max_notifications_per_hour: 10,
+                };
+                ErrorNotificationSystem::new(config)
+            },
+            test_coverage_analyzer: TestCoverageAnalyzer::new(1.0), // 100% покрытие
         }
     }
 
