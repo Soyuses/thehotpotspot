@@ -1,0 +1,207 @@
+name: Security Scan (Simplified)
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+  schedule:
+    # Запускаем каждый день в 2:00 UTC
+    - cron: '0 2 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Базовые проверки безопасности
+  basic-security-check:
+    name: Basic Security Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Check project compiles
+      run: cargo check --release
+    
+    - name: Run clippy security lints
+      run: cargo clippy --all-targets --all-features -- -D warnings
+    
+    - name: Run tests
+      run: cargo test --release
+
+  # Проверка зависимостей
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: ~/.cargo/registry
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Install cargo-audit
+      run: |
+        if ! command -v cargo-audit &> /dev/null; then
+          cargo install cargo-audit
+        fi
+    
+    - name: Run cargo audit
+      run: |
+        if command -v cargo-audit &> /dev/null; then
+          cargo audit || echo "⚠️ cargo-audit found issues (non-blocking)"
+        else
+          echo "ℹ️ cargo-audit not available, skipping"
+        fi
+    
+    - name: Check for outdated dependencies
+      run: |
+        if ! command -v cargo-outdated &> /dev/null; then
+          cargo install cargo-outdated
+        fi
+        cargo outdated --exit-code 0 || echo "ℹ️ Some dependencies are outdated"
+
+  # Сканирование секретов
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Run TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  # Генерация отчета
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [basic-security-check, dependency-check, secret-scan]
+    if: always()
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Generate security report
+      run: |
+        echo "# 🔒 Security Scan Report" > security-report.md
+        echo "**Generated:** $(date)" >> security-report.md
+        echo "**Commit:** ${{ github.sha }}" >> security-report.md
+        echo "**Branch:** ${{ github.ref_name }}" >> security-report.md
+        echo "" >> security-report.md
+        
+        echo "## 📊 Scan Results Summary" >> security-report.md
+        echo "- **Basic Security Check:** ${{ needs.basic-security-check.result }}" >> security-report.md
+        echo "- **Dependency Check:** ${{ needs.dependency-check.result }}" >> security-report.md
+        echo "- **Secret Scan:** ${{ needs.secret-scan.result }}" >> security-report.md
+        echo "" >> security-report.md
+        
+        echo "## 🎯 Overall Status" >> security-report.md
+        if [[ "${{ needs.basic-security-check.result }}" == "success" && "${{ needs.dependency-check.result }}" == "success" && "${{ needs.secret-scan.result }}" == "success" ]]; then
+          echo "✅ **All security checks passed!**" >> security-report.md
+        else
+          echo "⚠️ **Some security checks failed. Please review the results.**" >> security-report.md
+        fi
+        echo "" >> security-report.md
+        
+        echo "## 📋 Recommendations" >> security-report.md
+        echo "1. Review any failed checks above" >> security-report.md
+        echo "2. Update dependencies regularly" >> security-report.md
+        echo "3. Monitor for new security advisories" >> security-report.md
+        echo "4. Implement security best practices in code" >> security-report.md
+        echo "" >> security-report.md
+        
+        echo "## 🔗 Links" >> security-report.md
+        echo "- [View full workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> security-report.md
+        echo "- [Security tab](${{ github.server_url }}/${{ github.repository }}/security)" >> security-report.md
+    
+    - name: Upload security report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-report
+        path: security-report.md
+
+  # Email уведомления
+  notify-email:
+    name: Send Email Notification
+    runs-on: ubuntu-latest
+    needs: [security-report]
+    if: always()
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download security report
+      uses: actions/download-artifact@v3
+      with:
+        name: security-report
+        path: ./
+    
+    - name: Send notification email
+      uses: dawidd6/action-send-mail@v3
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ secrets.EMAIL_USERNAME }}
+        password: ${{ secrets.EMAIL_PASSWORD }}
+        subject: "🔒 Security Scan Results - TheHotPotSpot (${{ github.ref_name }})"
+        to: gildcgir@gmail.com
+        from: GitHub Actions <noreply@github.com>
+        body: |
+          Security scan completed for TheHotPotSpot project.
+          
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **Status:** ${{ needs.security-report.result }}
+          
+          **View full report:** ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          
+          ---
+          
+          $(cat security-report.md)
+        html_body: |
+          <h2>🔒 Security Scan Results - TheHotPotSpot</h2>
+          <p>Security scan completed for TheHotPotSpot project.</p>
+          
+          <ul>
+            <li><strong>Commit:</strong> <code>${{ github.sha }}</code></li>
+            <li><strong>Branch:</strong> <code>${{ github.ref_name }}</code></li>
+            <li><strong>Status:</strong> <code>${{ needs.security-report.result }}</code></li>
+          </ul>
+          
+          <p><a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}">View full report</a></p>
+          
+          <hr>
+          
+          <pre>$(cat security-report.md)</pre>

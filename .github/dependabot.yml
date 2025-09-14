@@ -1,0 +1,75 @@
+# Конфигурация Dependabot для автоматического обновления зависимостей
+
+version: 2
+updates:
+  # Обновления для Cargo (Rust)
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Soyuses"
+    assignees:
+      - "Soyuses"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "rust"
+    ignore:
+      # Игнорировать обновления для тестовых зависимостей
+      - dependency-name: "*"
+        update-types: ["version-update:semver-patch"]
+        # Игнорировать patch обновления для dev-dependencies
+        dependency-type: "development"
+    
+  # Обновления для GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Soyuses"
+    assignees:
+      - "Soyuses"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    ignore:
+      # Игнорировать обновления для некоторых actions
+      - dependency-name: "actions/checkout"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/cache"
+        update-types: ["version-update:semver-major"]
+
+  # Обновления для Docker (если есть Dockerfile)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "Soyuses"
+    assignees:
+      - "Soyuses"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
