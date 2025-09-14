@@ -300,6 +300,66 @@
         .franchise-info strong {
             color: #1976d2;
         }
+
+        /* Стили для видеопотоков */
+        .stream-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stream-info h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stream-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+
+        .stream-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .camera-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+
+        .camera-item h4 {
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .camera-item p {
+            margin: 3px 0;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .viewer-count {
+            color: #4facfe;
+            font-weight: bold;
+        }
+
+        .stat-item {
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            border-left: 3px solid #4facfe;
+        }
     </style>
 </head>
 <body>
@@ -347,6 +407,7 @@
         <div class="tabs">
             <button class="tab active" onclick="showTab('overview')">Обзор</button>
             <button class="tab" onclick="showTab('orders')">Заказы</button>
+            <button class="tab" onclick="showTab('video')">Видеопотоки</button>
             <button class="tab" onclick="showTab('analytics')">Аналитика</button>
             <button class="tab" onclick="showTab('settings')">Настройки</button>
         </div>
@@ -448,6 +509,168 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- Видеопотоки -->
+        <div id="video" class="tab-content">
+            <h2>Управление видеопотоками</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>📹 Активные потоки</h3>
+                    <div id="activeStreams">
+                        <div class="stream-item">
+                            <div class="stream-info">
+                                <h4>🍳 Кухонный поток</h4>
+                                <p>Камера: Kitchen_Cam_01</p>
+                                <p>Платформа: Twitch</p>
+                                <p>Зрители: <span class="viewer-count">127</span></p>
+                                <p>Статус: <span class="status confirmed">В эфире</span></p>
+                            </div>
+                            <div class="stream-controls">
+                                <button class="btn" onclick="toggleStream('kitchen_stream')">⏸️ Пауза</button>
+                                <button class="btn btn-secondary" onclick="switchCamera('kitchen_stream')">🔄 Сменить камеру</button>
+                            </div>
+                        </div>
+                        
+                        <div class="stream-item">
+                            <div class="stream-info">
+                                <h4>👥 Поток для клиентов</h4>
+                                <p>Камера: Customer_Cam_01</p>
+                                <p>Платформа: YouTube</p>
+                                <p>Зрители: <span class="viewer-count">89</span></p>
+                                <p>Статус: <span class="status confirmed">В эфире</span></p>
+                            </div>
+                            <div class="stream-controls">
+                                <button class="btn" onclick="toggleStream('customer_stream')">⏸️ Пауза</button>
+                                <button class="btn btn-secondary" onclick="switchCamera('customer_stream')">🔄 Сменить камеру</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🎥 Доступные камеры</h3>
+                    <div id="availableCameras">
+                        <div class="camera-item">
+                            <h4>Kitchen_Cam_01</h4>
+                            <p>Камера кухни - основной вид</p>
+                            <p>Разрешение: 1080p</p>
+                            <p>Статус: <span class="status confirmed">Активна</span></p>
+                        </div>
+                        
+                        <div class="camera-item">
+                            <h4>Kitchen_Cam_02</h4>
+                            <p>Камера кухни - боковой вид</p>
+                            <p>Разрешение: 720p</p>
+                            <p>Статус: <span class="status confirmed">Активна</span></p>
+                        </div>
+                        
+                        <div class="camera-item">
+                            <h4>Customer_Cam_01</h4>
+                            <p>Камера для клиентов</p>
+                            <p>Разрешение: 1080p</p>
+                            <p>Статус: <span class="status confirmed">Активна</span></p>
+                        </div>
+                        
+                        <div class="camera-item">
+                            <h4>Security_Cam_01</h4>
+                            <p>Камера безопасности</p>
+                            <p>Разрешение: 4K</p>
+                            <p>Статус: <span class="status pending">Недоступна</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>⚙️ Настройки потоков</h3>
+                    <div class="form-group">
+                        <label>Качество потока:</label>
+                        <select id="streamQuality">
+                            <option value="low">Низкое (480p)</option>
+                            <option value="medium" selected>Среднее (720p)</option>
+                            <option value="high">Высокое (1080p)</option>
+                            <option value="ultra">Ультра (4K)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Платформа для кухонного потока:</label>
+                        <select id="kitchenPlatform">
+                            <option value="twitch" selected>Twitch</option>
+                            <option value="youtube">YouTube</option>
+                            <option value="both">Обе платформы</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Платформа для клиентского потока:</label>
+                        <select id="customerPlatform">
+                            <option value="youtube" selected>YouTube</option>
+                            <option value="twitch">Twitch</option>
+                            <option value="both">Обе платформы</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="faceAnonymization" checked>
+                            Анонимизация лиц
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="autoStart" checked>
+                            Автоматический запуск потоков
+                        </label>
+                    </div>
+                    
+                    <button class="btn" onclick="updateStreamSettings()">Сохранить настройки</button>
+                </div>
+
+                <div class="card">
+                    <h3>📊 Статистика потоков</h3>
+                    <div id="streamStats">
+                        <div class="stat-item">
+                            <strong>Общее время эфира:</strong> 24ч 15м
+                        </div>
+                        <div class="stat-item">
+                            <strong>Максимум зрителей:</strong> 245
+                        </div>
+                        <div class="stat-item">
+                            <strong>Среднее количество зрителей:</strong> 108
+                        </div>
+                        <div class="stat-item">
+                            <strong>Всего просмотров:</strong> 1,247
+                        </div>
+                        <div class="stat-item">
+                            <strong>Время до первого зрителя:</strong> 2м 15с
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🚨 Алерты безопасности</h3>
+                <div id="securityAlerts">
+                    <div class="alert warning">
+                        <strong>⚠️ Обнаружено движение в нерабочее время</strong><br>
+                        Камера: Security_Cam_01<br>
+                        Время: 02:15:30<br>
+                        <button class="btn" onclick="acknowledgeAlert('movement_alert_001')">Подтвердить</button>
+                    </div>
+                    
+                    <div class="alert info">
+                        <strong>ℹ️ Камера Kitchen_Cam_02 перезапущена</strong><br>
+                        Время: 14:22:15<br>
+                        Причина: Плановое обслуживание<br>
+                        <button class="btn btn-secondary" onclick="acknowledgeAlert('camera_restart_002')">Подтвердить</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -563,6 +786,8 @@
                 loadOverviewData();
             } else if (tabName === 'orders') {
                 loadOrders();
+            } else if (tabName === 'video') {
+                loadVideoStreams();
             } else if (tabName === 'analytics') {
                 loadAnalytics();
             }
@@ -971,6 +1196,175 @@
             setTimeout(() => {
                 alert.remove();
             }, 5000);
+        }
+
+        // Функции для управления видеопотоками
+        function loadVideoStreams() {
+            // Загрузка данных о видеопотоках
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetVideoStreams: {
+                        franchise_node_id: franchiseNodeId
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.VideoStreams) {
+                    updateVideoStreams(data.VideoStreams);
+                }
+            })
+            .catch(error => {
+                console.log('API недоступен, используются демо-данные для видеопотоков');
+                // Демо-данные уже загружены в HTML
+            });
+        }
+
+        function toggleStream(streamId) {
+            const button = event.target;
+            const isPaused = button.textContent.includes('Пауза');
+            
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    ToggleStream: {
+                        stream_id: streamId,
+                        action: isPaused ? 'pause' : 'resume'
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.StreamToggled && data.StreamToggled.success) {
+                    button.textContent = isPaused ? '▶️ Возобновить' : '⏸️ Пауза';
+                    showAlert(`Поток ${streamId} ${isPaused ? 'приостановлен' : 'возобновлен'}`, 'success');
+                } else {
+                    showAlert('Ошибка управления потоком', 'error');
+                }
+            })
+            .catch(error => {
+                // Демо-функциональность
+                button.textContent = isPaused ? '▶️ Возобновить' : '⏸️ Пауза';
+                showAlert(`Поток ${streamId} ${isPaused ? 'приостановлен' : 'возобновлен'}`, 'success');
+            });
+        }
+
+        function switchCamera(streamId) {
+            const availableCameras = ['Kitchen_Cam_01', 'Kitchen_Cam_02', 'Customer_Cam_01'];
+            const currentCamera = document.querySelector(`[onclick="switchCamera('${streamId}')"]`).closest('.stream-item').querySelector('.stream-info p').textContent.split(': ')[1];
+            
+            const nextCamera = availableCameras.find(cam => cam !== currentCamera) || availableCameras[0];
+            
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    SwitchCamera: {
+                        stream_id: streamId,
+                        new_camera: nextCamera
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.CameraSwitched && data.CameraSwitched.success) {
+                    updateCameraDisplay(streamId, nextCamera);
+                    showAlert(`Камера переключена на ${nextCamera}`, 'success');
+                } else {
+                    showAlert('Ошибка переключения камеры', 'error');
+                }
+            })
+            .catch(error => {
+                // Демо-функциональность
+                updateCameraDisplay(streamId, nextCamera);
+                showAlert(`Камера переключена на ${nextCamera}`, 'success');
+            });
+        }
+
+        function updateCameraDisplay(streamId, newCamera) {
+            const streamItem = document.querySelector(`[onclick="switchCamera('${streamId}')"]`).closest('.stream-item');
+            const cameraInfo = streamItem.querySelector('.stream-info p');
+            cameraInfo.textContent = `Камера: ${newCamera}`;
+        }
+
+        function updateStreamSettings() {
+            const quality = document.getElementById('streamQuality').value;
+            const kitchenPlatform = document.getElementById('kitchenPlatform').value;
+            const customerPlatform = document.getElementById('customerPlatform').value;
+            const faceAnonymization = document.getElementById('faceAnonymization').checked;
+            const autoStart = document.getElementById('autoStart').checked;
+            
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    UpdateStreamSettings: {
+                        franchise_node_id: franchiseNodeId,
+                        quality: quality,
+                        kitchen_platform: kitchenPlatform,
+                        customer_platform: customerPlatform,
+                        face_anonymization: faceAnonymization,
+                        auto_start: autoStart
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.StreamSettingsUpdated && data.StreamSettingsUpdated.success) {
+                    showAlert('Настройки потоков обновлены!', 'success');
+                } else {
+                    showAlert('Ошибка обновления настроек', 'error');
+                }
+            })
+            .catch(error => {
+                // Демо-функциональность
+                showAlert('Настройки потоков обновлены!', 'success');
+            });
+        }
+
+        function acknowledgeAlert(alertId) {
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    AcknowledgeAlert: {
+                        alert_id: alertId
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.AlertAcknowledged && data.AlertAcknowledged.success) {
+                    const alertElement = event.target.closest('.alert');
+                    alertElement.style.opacity = '0.5';
+                    event.target.textContent = '✓ Подтверждено';
+                    event.target.disabled = true;
+                    showAlert('Алерт подтвержден', 'success');
+                } else {
+                    showAlert('Ошибка подтверждения алерта', 'error');
+                }
+            })
+            .catch(error => {
+                // Демо-функциональность
+                const alertElement = event.target.closest('.alert');
+                alertElement.style.opacity = '0.5';
+                event.target.textContent = '✓ Подтверждено';
+                event.target.disabled = true;
+                showAlert('Алерт подтвержден', 'success');
+            });
         }
 
         // Инициализация

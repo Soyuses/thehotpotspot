@@ -107,6 +107,33 @@
             border-color: #43e97b;
         }
 
+        .video-card {
+            background: linear-gradient(135deg, #ff9a9e, #fecfef);
+            color: white;
+        }
+
+        .video-card:hover {
+            border-color: #ff9a9e;
+        }
+
+        .api-card {
+            background: linear-gradient(135deg, #a8edea, #fed6e3);
+            color: #333;
+        }
+
+        .api-card:hover {
+            border-color: #a8edea;
+        }
+
+        .mobile-card {
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            color: #333;
+        }
+
+        .mobile-card:hover {
+            border-color: #ffecd2;
+        }
+
         .features {
             margin-top: 40px;
             text-align: left;
@@ -182,6 +209,140 @@
             color: #666;
             font-size: 0.9em;
         }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            margin: 0;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .download-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .download-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .download-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .instructions {
+            background: #e3f2fd;
+            border: 1px solid #bbdefb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .instructions h4 {
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+
+        .instructions ol {
+            margin-left: 20px;
+        }
+
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            border: 2px dashed #dee2e6;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
     </style>
 </head>
 <body>
@@ -224,12 +385,27 @@
 
             <a href="franchise_dashboard.html" class="interface-card franchise-card">
                 <h3>🏪 Владелец франшизы</h3>
-                <p>Управление франшизной нодой, просмотр доходов, статистика продаж</p>
+                <p>Управление франшизной нодой, просмотр доходов, статистика продаж, видеопотоки</p>
             </a>
 
             <a href="customer_wallet.html" class="interface-card customer-card">
                 <h3>👤 Покупатель</h3>
                 <p>Заказ еды, управление токенами, голосование за меню, история заказов</p>
+            </a>
+
+            <a href="video_management_dashboard.html" class="interface-card video-card">
+                <h3>📹 Видеонаблюдение</h3>
+                <p>Управление видеопотоками, мониторинг кухни, алерты безопасности</p>
+            </a>
+
+            <a href="api_test_interface.html" class="interface-card api-card">
+                <h3>🔧 API Тестирование</h3>
+                <p>Тестирование API, отладка запросов, мониторинг производительности</p>
+            </a>
+
+            <a href="#" class="interface-card mobile-card" onclick="showMobileAppModal()">
+                <h3>📱 Мобильное приложение</h3>
+                <p>Скачать приложение для iOS и Android, инструкции по установке</p>
             </a>
         </div>
 
@@ -254,6 +430,76 @@
                 <div class="feature-item">
                     <strong>Невостребованные токены:</strong> Годовое распределение
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для мобильного приложения -->
+    <div id="mobileAppModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📱 Мобильное приложение</h2>
+                <span class="close" onclick="closeMobileAppModal()">&times;</span>
+            </div>
+            
+            <div class="download-section">
+                <h3>Скачать приложение</h3>
+                <div class="download-buttons">
+                    <a href="mobile_apps/FoodTruckNetwork.apk" class="download-btn" download>
+                        🤖 Android APK
+                    </a>
+                    <a href="mobile_apps/FoodTruckNetwork.ipa" class="download-btn" download>
+                        🍎 iOS IPA
+                    </a>
+                </div>
+                
+                <div class="qr-code">
+                    <h4>Или отсканируйте QR-код:</h4>
+                    <div style="font-size: 100px; margin: 20px 0;">📱</div>
+                    <p><strong>Food Truck Network Mobile App</strong></p>
+                </div>
+            </div>
+
+            <div class="instructions">
+                <h4>📋 Инструкции по установке</h4>
+                
+                <h5>🤖 Для Android:</h5>
+                <ol>
+                    <li>Скачайте файл <strong>FoodTruckNetwork.apk</strong></li>
+                    <li>В настройках телефона разрешите установку из неизвестных источников</li>
+                    <li>Откройте скачанный APK файл</li>
+                    <li>Следуйте инструкциям установщика</li>
+                    <li>После установки откройте приложение и войдите в систему</li>
+                </ol>
+
+                <h5>🍎 Для iOS:</h5>
+                <ol>
+                    <li>Скачайте файл <strong>FoodTruckNetwork.ipa</strong></li>
+                    <li>Подключите iPhone к компьютеру</li>
+                    <li>Откройте iTunes или Finder (macOS Catalina+)</li>
+                    <li>Перетащите IPA файл в iTunes/Finder</li>
+                    <li>Синхронизируйте устройство</li>
+                    <li>В настройках iPhone доверьте разработчику приложения</li>
+                </ol>
+
+                <h5>⚠️ Важные замечания:</h5>
+                <ul>
+                    <li>Убедитесь, что у вас достаточно места на устройстве (минимум 100 МБ)</li>
+                    <li>Для iOS требуется iOS 12.0 или новее</li>
+                    <li>Для Android требуется Android 7.0 (API 24) или новее</li>
+                    <li>Приложение работает только с активным интернет-соединением</li>
+                </ul>
+            </div>
+
+            <div class="instructions">
+                <h4>🔧 Поддержка</h4>
+                <p>Если у вас возникли проблемы с установкой или использованием приложения:</p>
+                <ul>
+                    <li>📧 Email: support@foodtrucknetwork.com</li>
+                    <li>📞 Телефон: +1 (555) 123-4567</li>
+                    <li>💬 Telegram: @FoodTruckSupport</li>
+                    <li>🌐 Сайт: <a href="https://foodtrucknetwork.com/support" target="_blank">foodtrucknetwork.com/support</a></li>
+                </ul>
             </div>
         </div>
     </div>
@@ -287,6 +533,30 @@
         // Обновляем статистику каждые 30 секунд
         updateNetworkStats();
         setInterval(updateNetworkStats, 30000);
+
+        // Функции для модального окна мобильного приложения
+        function showMobileAppModal() {
+            document.getElementById('mobileAppModal').style.display = 'block';
+        }
+
+        function closeMobileAppModal() {
+            document.getElementById('mobileAppModal').style.display = 'none';
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.onclick = function(event) {
+            const modal = document.getElementById('mobileAppModal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Закрытие модального окна по клавише Escape
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeMobileAppModal();
+            }
+        });
     </script>
 </body>
 </html>

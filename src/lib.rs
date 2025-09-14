@@ -22,3 +22,6 @@ pub mod api_versioning;
 pub mod chef_arm;
 pub mod error_notification_system;
 pub mod test_coverage_analyzer;
+pub mod recipe_management;
+pub mod purchase_planning;
+pub mod cost_tracking;
