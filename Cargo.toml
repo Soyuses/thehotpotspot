@@ -23,6 +23,7 @@ csv = "1.3"
 thiserror = "1.0"
 tokio-postgres = "0.7"
 postgres-types = "0.2"
+md5 = "0.7"
 
 [dev-dependencies]
 qrcode = "0.13"
