@@ -38,3 +38,5 @@ pub mod check_api;
 pub mod anonymous_wallets;
 pub mod transparency_reporting;
 pub mod transparency_api;
+pub mod video_streaming;
+pub mod video_streaming_api;

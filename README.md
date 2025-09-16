@@ -1,217 +1,207 @@
-﻿# The Hot Pot Spot - Blockchain Restaurant Network
+﻿# The Hot Pot Spot - Блокчейн сеть фудтраков
 
-A comprehensive blockchain-based restaurant franchise network with video surveillance system, built in Rust.
+## 🍲 Описание проекта
 
-## 🚀 Project Status: READY FOR DEPLOYMENT
+The Hot Pot Spot - это инновационная блокчейн-основанная сеть фудтраков, которая объединяет традиционный ресторанный бизнес с современными технологиями блокчейна, токеномики и мобильных приложений.
 
-✅ **All tests passing** | ✅ **Full documentation complete** | ✅ **Deployment plan ready**
+## ✨ Основные возможности
 
-## Features
+### 🔗 Блокчейн интеграция
+- **ST токены** для владельцев франшиз
+- **UT токены** для пользователей и зрителей стримов
+- **DAO управление** системой через голосование
+- **KYC/AML** проверки для безопасности
 
-- **Blockchain Core**: Proof of Stake consensus, tokenomics, smart contracts
-- **Video Surveillance**: Real-time streaming to Twitch/YouTube with face anonymization
-- **Franchise Network**: Multi-node restaurant network with IPFS storage
-- **Web Interfaces**: HTML dashboards for owners, customers, and video management
-- **Mobile App**: React Native app for customers and franchise owners
-- **API Integration**: REST API for external system integration
-- **KYC/AML Compliance**: Full regulatory compliance with Georgian and EU laws
-- **Chef Automation**: ARM system for kitchen operations
-- **Customer Streaming**: Live customer experience streaming
+### 📱 Мобильное приложение
+- **React Native** приложение
+- **QR-коды** для быстрых платежей
+- **Анонимные кошельки** для конфиденциальности
+- **Интеграция со стримингом** для начисления токенов
 
-## Quick Start
+### 🏪 Управление франшизами
+- **Панель владельца** с аналитикой и управлением
+- **Панель франчайзи** с планированием закупок
+- **Система рецептов** и расчет стоимости
+- **Отслеживание затрат** и эффективности
 
-1. **Install Rust**: https://rustup.rs/
-2. **Clone repository**: `git clone https://github.com/Soyuses/thehotpotspot.git`
-3. **Build project**: `cargo build`
-4. **Run server**: `cargo run --bin blockchain_project`
-5. **Access interfaces**:
-   - Main page: http://127.0.0.1:8080/
-   - Video management: http://127.0.0.1:8080/video_management_dashboard.html
-   - API testing: http://127.0.0.1:8080/api_test_interface.html
+### 📊 Прозрачность и отчетность
+- **Публичные отчеты** по затратам и доходам
+- **Аналитика эффективности** франшиз
+- **API для интеграции** с внешними системами
 
-## Architecture
+## 🚀 Быстрый старт
 
-- **Backend**: Rust with Tokio async runtime
-- **Blockchain**: Custom PoS consensus with tokenomics
-- **Video System**: Real-time processing with anonymization
-- **Storage**: IPFS for decentralized data storage
-- **Frontend**: HTML/JavaScript with responsive design
-
-## 📚 Complete Documentation Suite
-
-### **Core Documentation:**
-- [**Technical Vision**](vision.md) - Project overview and technical state
-- [**Developer Guide**](DEVELOPER_GUIDE.md) - Complete developer onboarding
-- [**DevOps Guide**](DEVOPS_GUIDE.md) - Infrastructure and deployment
-- [**System Roles Guide**](SYSTEM_ROLES_GUIDE.md) - RBAC and user management
-- [**Architecture Documentation**](ARCHITECTURE_DOCUMENTATION.md) - Detailed system architecture
-
-### **Deployment & Strategy:**
-- [**Blockchain Architecture Recommendations**](BLOCKCHAIN_ARCHITECTURE_RECOMMENDATIONS.md) - Deployment strategy
-- [**Deployment & Testing Plan**](DEPLOYMENT_AND_TESTING_PLAN.md) - 8-week implementation plan
-
-### **Legacy Documentation:**
-- [Video Surveillance System](VIDEO_SURVEILLANCE_REPORT.md)
-- [Frontend-Backend Integration](FRONTEND_BACKEND_INTEGRATION_REPORT.md)
-- [Quick Start Guide](VIDEO_SYSTEM_QUICK_START.md)
-
-## 🧪 Testing & Quality Assurance
-
-### **Test Results:**
-- ✅ **Compilation**: All code compiles without errors
-- ✅ **Unit Tests**: Core functionality tested
-- ✅ **Integration Tests**: Database and API integration verified
-- ✅ **Property Tests**: QuickCheck property-based testing implemented
-- ✅ **Chef Integration Tests**: Kitchen automation system tested
-
-### **Run Tests:**
+### 1. Запуск всех серверов
 ```bash
-# Full test suite
+# Windows
+start_servers.bat
+
+# Linux/Mac
+./start_servers.sh
+```
+
+### 2. Ручной запуск серверов
+```bash
+# Основной блокчейн сервер (порт 3000)
+cargo run --bin blockchain_project
+
+# Check API сервер (порт 8081)
+cargo run --example check_api_demo
+
+# Transparency API сервер (порт 8082)
+cargo run --example transparency_demo
+```
+
+### 3. Открытие веб-интерфейсов
+- **Главная страница**: `index.html`
+- **Панель владельца**: `owner_dashboard.html`
+- **Панель франчайзи**: `franchise_dashboard.html`
+- **Панель прозрачности**: `transparency_dashboard.html`
+
+## 📱 Мобильное приложение
+
+### Установка зависимостей
+```bash
+cd mobile_app
+npm install
+```
+
+### Запуск приложения
+```bash
+# Android
+npx react-native run-android
+
+# iOS
+npx react-native run-ios
+```
+
+## 🧪 Тестирование
+
+### Запуск всех тестов
+```bash
 cargo test
-
-# Specific test categories
-cargo test --lib                    # Library tests
-cargo test --test test_database     # Database tests
-cargo test --test property_tests    # Property-based tests
-
-# Run with output
-cargo test -- --nocapture
-
-# Performance testing
-cargo test --release
 ```
 
-### **Quality Metrics:**
-- **Code Coverage**: > 80% (target)
-- **Compilation Warnings**: 0 critical errors
-- **Security**: OWASP compliance ready
-- **Performance**: < 2s response time target
+### Запуск конкретных тестов
+```bash
+# Unit тесты
+cargo test --lib
 
-## 🚀 Deployment Recommendations
+# Интеграционные тесты
+cargo test --test integration_tests
 
-### **Start with Single Server (Heroku):**
-- **Cost**: $44-200/month
-- **Performance**: 100-500 TPS
-- **Users**: Up to 1000 concurrent
-- **Setup Time**: 1-2 weeks
-
-### **Scale to Distributed Network:**
-- **When**: > 1000 TPS or > 50 nodes
-- **Architecture**: Kubernetes cluster
-- **Performance**: 1000+ TPS
-- **Users**: 10000+ concurrent
-
-See [Blockchain Architecture Recommendations](BLOCKCHAIN_ARCHITECTURE_RECOMMENDATIONS.md) for detailed deployment strategy.
-
-## 🏗️ Project Structure
-
-```
-TheHotPotSpot/
-├── src/                          # Rust source code
-│   ├── main.rs                   # Main application
-│   ├── config.rs                 # Configuration
-│   ├── consensus.rs              # Blockchain consensus
-│   ├── database.rs               # Database management
-│   ├── video_surveillance.rs     # Video system
-│   ├── franchise_network.rs      # Network management
-│   ├── kyc_aml.rs               # Compliance
-│   ├── chef_arm.rs              # Kitchen automation
-│   └── ...                      # Other modules
-├── tests/                        # Test suites
-├── contracts/                    # Smart contracts
-├── mobile/                       # React Native apps
-├── docs/                         # Documentation
-└── deployment/                   # Deployment configs
+# Property тесты
+cargo test --test property_tests
 ```
 
-## 🔧 Technology Stack
+## 📚 API документация
 
-### **Backend:**
-- **Language**: Rust 1.70+
-- **Runtime**: Tokio async
-- **Database**: PostgreSQL
-- **Blockchain**: Custom PoS
-- **Storage**: IPFS
+### Основной API (порт 3000)
+- **GET** `/api/status` - Статус системы
+- **POST** `/api/transactions` - Создание транзакций
+- **GET** `/api/balance/{address}` - Баланс кошелька
 
-### **Frontend:**
-- **Web**: HTML5, JavaScript, CSS3
-- **Mobile**: React Native
-- **Charts**: Chart.js
-- **UI**: Responsive design
+### Check API (порт 8081)
+- **POST** `/api/checks/generate` - Генерация чека
+- **POST** `/api/checks/claim` - Получение чека
+- **GET** `/api/checks/{id}` - Информация о чеке
 
-### **Infrastructure:**
-- **Deployment**: Heroku → Kubernetes
-- **Monitoring**: Prometheus, Grafana
-- **CI/CD**: GitHub Actions
-- **Security**: OWASP compliance
+### Transparency API (порт 8082)
+- **GET** `/api/reports` - Список отчетов
+- **POST** `/api/reports/generate` - Генерация отчета
+- **GET** `/api/reports/{id}` - Получение отчета
 
-## 📊 Performance Targets
+## 🏗️ Архитектура
 
-### **Single Server (MVP):**
-- **TPS**: 100-500 transactions/second
-- **Response Time**: < 2 seconds
-- **Uptime**: > 99.5%
-- **Users**: 1000 concurrent
+### Основные модули
+- **`src/new_tokenomics.rs`** - Токеномика ST/UT токенов
+- **`src/kyc_aml.rs`** - KYC/AML проверки
+- **`src/governance_dao.rs`** - DAO управление
+- **`src/viewer_arm.rs`** - Интеграция со стримингом
+- **`src/check_generation.rs`** - Генерация чеков
+- **`src/anonymous_wallets.rs`** - Анонимные кошельки
+- **`src/transparency_reporting.rs`** - Отчетность
 
-### **Distributed Network (Scale):**
-- **TPS**: 1000+ transactions/second
-- **Response Time**: < 1 second
-- **Uptime**: > 99.9%
-- **Users**: 10000+ concurrent
+### Веб-интерфейсы
+- **`index.html`** - Главная страница
+- **`owner_dashboard.html`** - Панель владельца
+- **`franchise_dashboard.html`** - Панель франчайзи
+- **`transparency_dashboard.html`** - Панель прозрачности
 
-## 🛡️ Security & Compliance
+### Мобильное приложение
+- **`mobile_app/App.tsx`** - Главный компонент
+- **`mobile_app/src/screens/`** - Экраны приложения
+- **`mobile_app/src/contexts/`** - Контексты состояния
 
-- **KYC/AML**: Full user verification
-- **Data Protection**: GDPR compliant
-- **Encryption**: End-to-end encryption
-- **Audit Trail**: Complete transaction history
-- **Access Control**: RBAC system
+## 🔧 Конфигурация
 
-## 📈 Roadmap
+### Переменные окружения
+```bash
+# База данных
+DATABASE_URL=postgresql://user:password@localhost/thehotpotspot
 
-### **Phase 1: MVP (0-6 months)**
-- Single server deployment
-- Basic functionality
-- 100-500 users
+# API ключи
+TWITCH_CLIENT_ID=your_twitch_client_id
+YOUTUBE_API_KEY=your_youtube_api_key
 
-### **Phase 2: Growth (6-18 months)**
-- Distributed network
-- Advanced features
-- 1000-5000 users
+# Блокчейн
+BLOCKCHAIN_NETWORK=testnet
+```
 
-### **Phase 3: Scale (18+ months)**
-- Global deployment
-- Enterprise features
-- 10000+ users
+## 📈 Мониторинг
 
-## 🤝 Contributing
+### Логи
+```bash
+# Просмотр логов
+tail -f logs/blockchain.log
+tail -f logs/api.log
+```
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Make your changes
-4. Add tests for new functionality
-5. Run the test suite: `cargo test`
-6. Commit your changes: `git commit -m 'Add amazing feature'`
-7. Push to the branch: `git push origin feature/amazing-feature`
-8. Submit a pull request
+### Метрики
+- **Производительность**: Время обработки транзакций
+- **Безопасность**: Количество KYC проверок
+- **Использование**: Активные пользователи и транзакции
 
-## 📞 Support
+## 🤝 Участие в разработке
+
+### Установка зависимостей
+```bash
+# Rust
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Node.js (для мобильного приложения)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+```
+
+### Сборка проекта
+```bash
+cargo build --release
+```
+
+## 📄 Лицензия
+
+MIT License - см. файл [LICENSE](LICENSE)
+
+## 🆘 Поддержка
 
 - **Issues**: [GitHub Issues](https://github.com/Soyuses/thehotpotspot/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/Soyuses/thehotpotspot/discussions)
-- **Documentation**: See the complete documentation suite above
+- **Email**: support@thehotpotspot.com
 
-## 📄 License
+## 🎯 Roadmap
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+### Версия 1.1
+- [ ] Интеграция с дополнительными стриминговыми платформами
+- [ ] Расширенная аналитика
+- [ ] Мобильные уведомления
 
-## 🙏 Acknowledgments
-
-- Rust community for excellent tooling
-- OpenZeppelin for smart contract templates
-- IPFS for decentralized storage
-- All contributors and testers
+### Версия 1.2
+- [ ] Интеграция с внешними платежными системами
+- [ ] Многоязычная поддержка
+- [ ] Расширенные KYC проверки
 
 ---
 
-**Ready to deploy?** Check out the [Deployment & Testing Plan](DEPLOYMENT_AND_TESTING_PLAN.md) for a complete 8-week implementation guide!
+**Версия**: 1.0.0  
+**Статус**: Production Ready  
+**Последнее обновление**: $(date)

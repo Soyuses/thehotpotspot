@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Hot Pot Spot - Управление видеопотоками</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #27ae60, #229954);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .streams-list {
+            grid-column: 1 / -1;
+        }
+
+        .stream-item {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .stream-info h3 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stream-info p {
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .stream-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-running {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-stopped {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-starting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .video-preview {
+            width: 100%;
+            height: 200px;
+            background: #000;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .camera-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .camera-item {
+            padding: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .camera-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .camera-item:last-child {
+            border-bottom: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+            
+            .stream-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .stream-actions {
+                margin-top: 15px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎥 Управление видеопотоками</h1>
+            <p>The Hot Pot Spot - Система видеозаписи и стриминга</p>
+        </div>
+
+        <div id="alerts"></div>
+
+        <div class="dashboard">
+            <!-- Создание потока с камеры -->
+            <div class="card">
+                <h2>📹 Запись с камеры</h2>
+                <form id="cameraForm">
+                    <div class="form-group">
+                        <label for="cameraSelect">Выберите камеру:</label>
+                        <select id="cameraSelect" required>
+                            <option value="">Загрузка камер...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cameraTitle">Название потока:</label>
+                        <input type="text" id="cameraTitle" placeholder="Например: Основная камера" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="cameraQuality">Качество:</label>
+                        <select id="cameraQuality">
+                            <option value="medium">720p (Среднее)</option>
+                            <option value="high">1080p (Высокое)</option>
+                            <option value="ultra">4K (Ультра)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="cameraAutoStart"> Автозапуск
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">🎬 Создать поток</button>
+                </form>
+            </div>
+
+            <!-- Создание потока с YouTube -->
+            <div class="card">
+                <h2>📺 Стрим с YouTube</h2>
+                <form id="youtubeForm">
+                    <div class="form-group">
+                        <label for="youtubeUrl">YouTube URL:</label>
+                        <input type="url" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=..." required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="youtubeTitle">Название потока:</label>
+                        <input type="text" id="youtubeTitle" placeholder="Например: Фоновое видео" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="youtubeQuality">Качество:</label>
+                        <select id="youtubeQuality">
+                            <option value="high">1080p (Высокое)</option>
+                            <option value="medium">720p (Среднее)</option>
+                            <option value="low">480p (Низкое)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="youtubeLoop" checked> Зацикливание
+                        </label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="youtubeAutoStart"> Автозапуск
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-success">🎬 Создать поток</button>
+                </form>
+            </div>
+
+            <!-- Список активных потоков -->
+            <div class="card streams-list">
+                <h2>📋 Активные потоки</h2>
+                <div id="streamsList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Загрузка потоков...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Предварительный просмотр -->
+        <div class="card">
+            <h2>👁️ Предварительный просмотр</h2>
+            <div class="video-preview" id="videoPreview">
+                Выберите поток для предварительного просмотра
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8083/api';
+        let streams = [];
+
+        // Инициализация
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCameras();
+            loadStreams();
+            
+            // Обработчики форм
+            document.getElementById('cameraForm').addEventListener('submit', createCameraStream);
+            document.getElementById('youtubeForm').addEventListener('submit', createYouTubeStream);
+        });
+
+        // Загрузка доступных камер
+        async function loadCameras() {
+            try {
+                const response = await fetch(`${API_BASE}/cameras`);
+                const cameras = await response.json();
+                
+                const select = document.getElementById('cameraSelect');
+                select.innerHTML = '<option value="">Выберите камеру</option>';
+                
+                cameras.forEach(camera => {
+                    const option = document.createElement('option');
+                    option.value = camera.device_id;
+                    option.textContent = `${camera.name} (${camera.resolution})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                showAlert('Ошибка загрузки камер: ' + error.message, 'error');
+            }
+        }
+
+        // Загрузка активных потоков
+        async function loadStreams() {
+            try {
+                const response = await fetch(`${API_BASE}/streams`);
+                streams = await response.json();
+                renderStreams();
+            } catch (error) {
+                showAlert('Ошибка загрузки потоков: ' + error.message, 'error');
+            }
+        }
+
+        // Создание потока с камеры
+        async function createCameraStream(e) {
+            e.preventDefault();
+            
+            const formData = {
+                device_id: document.getElementById('cameraSelect').value,
+                title: document.getElementById('cameraTitle').value,
+                quality: document.getElementById('cameraQuality').value,
+                auto_start: document.getElementById('cameraAutoStart').checked
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/streams/camera`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (result.status === 'created') {
+                    showAlert('Поток с камеры создан успешно!', 'success');
+                    loadStreams();
+                    document.getElementById('cameraForm').reset();
+                } else {
+                    showAlert('Ошибка создания потока: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка создания потока: ' + error.message, 'error');
+            }
+        }
+
+        // Создание потока с YouTube
+        async function createYouTubeStream(e) {
+            e.preventDefault();
+            
+            const formData = {
+                url: document.getElementById('youtubeUrl').value,
+                title: document.getElementById('youtubeTitle').value,
+                quality: document.getElementById('youtubeQuality').value,
+                loop_video: document.getElementById('youtubeLoop').checked,
+                auto_start: document.getElementById('youtubeAutoStart').checked
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/streams/youtube`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                
+                if (result.status === 'created') {
+                    showAlert('YouTube поток создан успешно!', 'success');
+                    loadStreams();
+                    document.getElementById('youtubeForm').reset();
+                } else {
+                    showAlert('Ошибка создания потока: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка создания потока: ' + error.message, 'error');
+            }
+        }
+
+        // Запуск потока
+        async function startStream(streamId) {
+            try {
+                const response = await fetch(`${API_BASE}/streams/start/${streamId}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showAlert('Поток запущен!', 'success');
+                    loadStreams();
+                } else {
+                    showAlert('Ошибка запуска потока: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка запуска потока: ' + error.message, 'error');
+            }
+        }
+
+        // Остановка потока
+        async function stopStream(streamId) {
+            try {
+                const response = await fetch(`${API_BASE}/streams/stop/${streamId}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    showAlert('Поток остановлен!', 'success');
+                    loadStreams();
+                } else {
+                    showAlert('Ошибка остановки потока: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showAlert('Ошибка остановки потока: ' + error.message, 'error');
+            }
+        }
+
+        // Отображение потоков
+        function renderStreams() {
+            const container = document.getElementById('streamsList');
+            
+            if (streams.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">Нет активных потоков</p>';
+                return;
+            }
+
+            container.innerHTML = streams.map(stream => `
+                <div class="stream-item">
+                    <div class="stream-info">
+                        <h3>${stream.metadata.title}</h3>
+                        <p><strong>Тип:</strong> ${getStreamTypeName(stream.stream_type)}</p>
+                        <p><strong>Источник:</strong> ${getStreamSourceInfo(stream.source)}</p>
+                        <p><strong>Создан:</strong> ${new Date(stream.created_at).toLocaleString()}</p>
+                    </div>
+                    <div class="stream-actions">
+                        <span class="stream-status status-${stream.status.toLowerCase()}">
+                            ${getStatusName(stream.status)}
+                        </span>
+                        <button class="btn btn-success" onclick="startStream('${stream.stream_id}')" 
+                                ${stream.status === 'Running' ? 'disabled' : ''}>
+                            ▶️ Запустить
+                        </button>
+                        <button class="btn btn-danger" onclick="stopStream('${stream.stream_id}')"
+                                ${stream.status === 'Stopped' ? 'disabled' : ''}>
+                            ⏹️ Остановить
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Вспомогательные функции
+        function getStreamTypeName(type) {
+            const types = {
+                'Camera': '📹 Камера',
+                'YouTube': '📺 YouTube',
+                'File': '📁 Файл',
+                'ScreenCapture': '🖥️ Захват экрана'
+            };
+            return types[type] || type;
+        }
+
+        function getStreamSourceInfo(source) {
+            if (source.Camera) {
+                return `Камера: ${source.Camera.device_id}`;
+            } else if (source.YouTube) {
+                return `YouTube: ${source.YouTube.video_id}`;
+            } else if (source.File) {
+                return `Файл: ${source.File.file_path}`;
+            } else if (source.ScreenCapture) {
+                return `Экран: ${source.ScreenCapture.display_id}`;
+            }
+            return 'Неизвестно';
+        }
+
+        function getStatusName(status) {
+            const statuses = {
+                'Stopped': 'Остановлен',
+                'Starting': 'Запускается',
+                'Running': 'Работает',
+                'Paused': 'Приостановлен',
+                'Error': 'Ошибка'
+            };
+            return statuses[status] || status;
+        }
+
+        function showAlert(message, type) {
+            const alertsContainer = document.getElementById('alerts');
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            
+            alertsContainer.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 5000);
+        }
+
+        // Автообновление каждые 5 секунд
+        setInterval(loadStreams, 5000);
+    </script>
+</body>
+</html>
