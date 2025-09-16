@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use crate::franchise_network::{FranchiseNetwork, Sale, SaleItem};
+use crate::franchise_network::FranchiseNetwork;
 
 // IPFS интеграция для децентрализованного хранения
 #[derive(Debug, Clone, Serialize, Deserialize)]

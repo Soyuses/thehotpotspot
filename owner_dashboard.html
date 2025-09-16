@@ -482,6 +482,8 @@
             <button class="tab" onclick="showTab('franchises')">Франшизы</button>
             <button class="tab" onclick="showTab('token-emission')">Эмиссия токенов</button>
             <button class="tab" onclick="showTab('cost-accounting')">Учет затрат</button>
+            <button class="tab" onclick="showTab('streams')">Управление стримами</button>
+            <button class="tab" onclick="showTab('image-management')">Управление изображениями</button>
             <button class="tab" onclick="showTab('unclaimed')">Невостребованные</button>
             <button class="tab" onclick="showTab('security')">Безопасность</button>
         </div>
@@ -757,6 +759,131 @@
                 <div id="securityReport">
                     <p>Загрузка отчета по безопасности...</p>
                 </div>
+            </div>
+        </div>
+
+        <!-- Управление стримами -->
+        <div id="streams" class="tab-content">
+            <h2>🎥 Управление всеми стримами сети</h2>
+            
+            <div class="card">
+                <h3>Активные стримы</h3>
+                <div id="activeStreams">
+                    <p>Загрузка активных стримов...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Создать новый стрим</h3>
+                <div class="form-group">
+                    <label for="streamType">Тип стрима:</label>
+                    <select id="streamType">
+                        <option value="camera">Камера</option>
+                        <option value="youtube">YouTube</option>
+                        <option value="screen">Захват экрана</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="streamTitle">Название стрима:</label>
+                    <input type="text" id="streamTitle" placeholder="Введите название стрима">
+                </div>
+                
+                <div class="form-group" id="cameraGroup" style="display: none;">
+                    <label for="cameraSelect">Выберите камеру:</label>
+                    <select id="cameraSelect">
+                        <option value="">Загрузка камер...</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" id="youtubeGroup" style="display: none;">
+                    <label for="youtubeUrl">YouTube URL:</label>
+                    <input type="url" id="youtubeUrl" placeholder="https://www.youtube.com/watch?v=...">
+                </div>
+                
+                <div class="form-group">
+                    <label for="streamQuality">Качество:</label>
+                    <select id="streamQuality">
+                        <option value="medium">720p (Среднее)</option>
+                        <option value="high">1080p (Высокое)</option>
+                        <option value="ultra">4K (Ультра)</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="streamAutoStart"> Автозапуск
+                    </label>
+                </div>
+                
+                <button class="btn" onclick="createStream()">🎬 Создать стрим</button>
+            </div>
+
+            <div class="card">
+                <h3>Управление стримами</h3>
+                <div id="streamsList">
+                    <p>Загрузка списка стримов...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Управление изображениями -->
+        <div id="image-management" class="tab-content">
+            <h2>🖼️ Управление изображениями</h2>
+            
+            <div class="card">
+                <h3>Загрузка изображений для замены заблюренных лиц</h3>
+                <div class="form-group">
+                    <label for="imageUpload">Выберите изображение:</label>
+                    <input type="file" id="imageUpload" accept="image/*" multiple>
+                </div>
+                
+                <div class="form-group">
+                    <label for="imageCategory">Категория изображения:</label>
+                    <select id="imageCategory">
+                        <option value="face-replacement">Замена лиц</option>
+                        <option value="logo">Логотип</option>
+                        <option value="background">Фон</option>
+                        <option value="overlay">Наложение</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="imageDescription">Описание:</label>
+                    <textarea id="imageDescription" placeholder="Описание изображения"></textarea>
+                </div>
+                
+                <button class="btn" onclick="uploadImage()">📤 Загрузить изображение</button>
+            </div>
+
+            <div class="card">
+                <h3>Загруженные изображения</h3>
+                <div id="uploadedImages">
+                    <p>Загрузка списка изображений...</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Настройки обработки лиц</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enableFaceBlur" checked> Включить размытие лиц
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="enableFaceReplacement"> Заменить лица на загруженные изображения
+                    </label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="blurIntensity">Интенсивность размытия:</label>
+                    <input type="range" id="blurIntensity" min="1" max="10" value="5">
+                    <span id="blurValue">5</span>
+                </div>
+                
+                <button class="btn" onclick="saveFaceSettings()">💾 Сохранить настройки</button>
             </div>
         </div>
     </div>
@@ -1263,6 +1390,10 @@
                 loadFranchises();
             } else if (tabName === 'cost-accounting') {
                 loadCostAccountingData();
+            } else if (tabName === 'streams') {
+                loadStreamsData();
+            } else if (tabName === 'image-management') {
+                loadImageManagementData();
             } else if (tabName === 'unclaimed') {
                 loadUnclaimedTokens();
             } else if (tabName === 'security') {
@@ -1296,6 +1427,291 @@
         });
 
         // Инициализация
+        // Функции для управления стримами
+        function loadStreamsData() {
+            loadActiveStreams();
+            loadStreamsList();
+            loadCameras();
+        }
+
+        function loadActiveStreams() {
+            fetch('http://localhost:8083/api/streams')
+                .then(response => response.json())
+                .then(streams => {
+                    const activeStreams = streams.filter(stream => stream.status === 'Running');
+                    const container = document.getElementById('activeStreams');
+                    
+                    if (activeStreams.length === 0) {
+                        container.innerHTML = '<p>Нет активных стримов</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = activeStreams.map(stream => `
+                        <div class="stream-item">
+                            <h4>${stream.metadata.title}</h4>
+                            <p>Тип: ${getStreamTypeName(stream.stream_type)}</p>
+                            <p>Статус: <span class="status-running">Работает</span></p>
+                            <button class="btn btn-danger" onclick="stopStream('${stream.stream_id}')">⏹️ Остановить</button>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    document.getElementById('activeStreams').innerHTML = '<p>Ошибка загрузки стримов</p>';
+                });
+        }
+
+        function loadStreamsList() {
+            fetch('http://localhost:8083/api/streams')
+                .then(response => response.json())
+                .then(streams => {
+                    const container = document.getElementById('streamsList');
+                    
+                    if (streams.length === 0) {
+                        container.innerHTML = '<p>Нет созданных стримов</p>';
+                        return;
+                    }
+                    
+                    container.innerHTML = streams.map(stream => `
+                        <div class="stream-item">
+                            <h4>${stream.metadata.title}</h4>
+                            <p>Тип: ${getStreamTypeName(stream.stream_type)}</p>
+                            <p>Статус: <span class="status-${stream.status.toLowerCase()}">${getStatusName(stream.status)}</span></p>
+                            <p>Создан: ${new Date(stream.created_at).toLocaleString()}</p>
+                            <div class="stream-actions">
+                                <button class="btn btn-success" onclick="startStream('${stream.stream_id}')" 
+                                        ${stream.status === 'Running' ? 'disabled' : ''}>
+                                    ▶️ Запустить
+                                </button>
+                                <button class="btn btn-danger" onclick="stopStream('${stream.stream_id}')"
+                                        ${stream.status === 'Stopped' ? 'disabled' : ''}>
+                                    ⏹️ Остановить
+                                </button>
+                                <button class="btn btn-warning" onclick="deleteStream('${stream.stream_id}')">
+                                    🗑️ Удалить
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(error => {
+                    document.getElementById('streamsList').innerHTML = '<p>Ошибка загрузки списка стримов</p>';
+                });
+        }
+
+        function loadCameras() {
+            fetch('http://localhost:8083/api/cameras')
+                .then(response => response.json())
+                .then(cameras => {
+                    const select = document.getElementById('cameraSelect');
+                    select.innerHTML = '<option value="">Выберите камеру</option>';
+                    
+                    cameras.forEach(camera => {
+                        const option = document.createElement('option');
+                        option.value = camera.device_id;
+                        option.textContent = `${camera.name} (${camera.resolution})`;
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => {
+                    document.getElementById('cameraSelect').innerHTML = '<option value="">Ошибка загрузки камер</option>';
+                });
+        }
+
+        function createStream() {
+            const streamType = document.getElementById('streamType').value;
+            const title = document.getElementById('streamTitle').value;
+            const quality = document.getElementById('streamQuality').value;
+            const autoStart = document.getElementById('streamAutoStart').checked;
+            
+            if (!title) {
+                alert('Введите название стрима');
+                return;
+            }
+            
+            let requestData = {
+                title: title,
+                quality: quality,
+                auto_start: autoStart
+            };
+            
+            let endpoint = '';
+            
+            if (streamType === 'camera') {
+                const deviceId = document.getElementById('cameraSelect').value;
+                if (!deviceId) {
+                    alert('Выберите камеру');
+                    return;
+                }
+                requestData.device_id = deviceId;
+                endpoint = 'http://localhost:8083/api/streams/camera';
+            } else if (streamType === 'youtube') {
+                const url = document.getElementById('youtubeUrl').value;
+                if (!url) {
+                    alert('Введите YouTube URL');
+                    return;
+                }
+                requestData.url = url;
+                endpoint = 'http://localhost:8083/api/streams/youtube';
+            }
+            
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'created') {
+                    alert('Стрим создан успешно!');
+                    loadStreamsData();
+                    // Очистить форму
+                    document.getElementById('streamTitle').value = '';
+                    document.getElementById('youtubeUrl').value = '';
+                } else {
+                    alert('Ошибка создания стрима: ' + result.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка создания стрима: ' + error.message);
+            });
+        }
+
+        function startStream(streamId) {
+            fetch(`http://localhost:8083/api/streams/start/${streamId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    alert('Стрим запущен!');
+                    loadStreamsData();
+                } else {
+                    alert('Ошибка запуска стрима: ' + result.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка запуска стрима: ' + error.message);
+            });
+        }
+
+        function stopStream(streamId) {
+            fetch(`http://localhost:8083/api/streams/stop/${streamId}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === 'success') {
+                    alert('Стрим остановлен!');
+                    loadStreamsData();
+                } else {
+                    alert('Ошибка остановки стрима: ' + result.message);
+                }
+            })
+            .catch(error => {
+                alert('Ошибка остановки стрима: ' + error.message);
+            });
+        }
+
+        function deleteStream(streamId) {
+            if (confirm('Вы уверены, что хотите удалить этот стрим?')) {
+                // Здесь будет API для удаления стрима
+                alert('Функция удаления стрима будет реализована в следующей версии');
+            }
+        }
+
+        // Функции для управления изображениями
+        function loadImageManagementData() {
+            loadUploadedImages();
+            loadFaceSettings();
+        }
+
+        function loadUploadedImages() {
+            // Здесь будет загрузка списка загруженных изображений
+            document.getElementById('uploadedImages').innerHTML = '<p>Список загруженных изображений будет загружен</p>';
+        }
+
+        function loadFaceSettings() {
+            // Загрузка настроек обработки лиц
+            // Здесь будут настройки по умолчанию
+        }
+
+        function uploadImage() {
+            const fileInput = document.getElementById('imageUpload');
+            const category = document.getElementById('imageCategory').value;
+            const description = document.getElementById('imageDescription').value;
+            
+            if (!fileInput.files.length) {
+                alert('Выберите изображение для загрузки');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+            formData.append('category', category);
+            formData.append('description', description);
+            
+            // Здесь будет API для загрузки изображений
+            alert('Изображение загружено успешно! (Функция будет реализована в следующей версии)');
+            
+            // Очистить форму
+            fileInput.value = '';
+            document.getElementById('imageDescription').value = '';
+        }
+
+        function saveFaceSettings() {
+            const enableBlur = document.getElementById('enableFaceBlur').checked;
+            const enableReplacement = document.getElementById('enableFaceReplacement').checked;
+            const blurIntensity = document.getElementById('blurIntensity').value;
+            
+            const settings = {
+                enableBlur: enableBlur,
+                enableReplacement: enableReplacement,
+                blurIntensity: parseInt(blurIntensity)
+            };
+            
+            // Здесь будет API для сохранения настроек
+            alert('Настройки сохранены! (Функция будет реализована в следующей версии)');
+        }
+
+        // Вспомогательные функции
+        function getStreamTypeName(type) {
+            const types = {
+                'Camera': '📹 Камера',
+                'YouTube': '📺 YouTube',
+                'File': '📁 Файл',
+                'ScreenCapture': '🖥️ Захват экрана'
+            };
+            return types[type] || type;
+        }
+
+        function getStatusName(status) {
+            const statuses = {
+                'Stopped': 'Остановлен',
+                'Starting': 'Запускается',
+                'Running': 'Работает',
+                'Paused': 'Приостановлен',
+                'Error': 'Ошибка'
+            };
+            return statuses[status] || status;
+        }
+
+        // Обработчик изменения типа стрима
+        document.getElementById('streamType').addEventListener('change', function() {
+            const streamType = this.value;
+            const cameraGroup = document.getElementById('cameraGroup');
+            const youtubeGroup = document.getElementById('youtubeGroup');
+            
+            cameraGroup.style.display = streamType === 'camera' ? 'block' : 'none';
+            youtubeGroup.style.display = streamType === 'youtube' ? 'block' : 'none';
+        });
+
+        // Обработчик изменения интенсивности размытия
+        document.getElementById('blurIntensity').addEventListener('input', function() {
+            document.getElementById('blurValue').textContent = this.value;
+        });
+
         document.addEventListener('DOMContentLoaded', function() {
             loadMonitoringData();
             // Установить сегодняшнюю дату по умолчанию

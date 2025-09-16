@@ -1,6 +1,5 @@
 use crate::video_streaming::{
-    VideoStreamingManager, StreamRequest, StreamResponse, StreamConfig, StreamQuality,
-    OverlayConfig, StreamType, StreamSource
+    VideoStreamingManager, StreamResponse, StreamConfig, StreamQuality
 };
 use warp::Filter;
 use serde_json::json;

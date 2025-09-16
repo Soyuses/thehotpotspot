@@ -13,7 +13,7 @@ use chrono::{DateTime, Utc};
 
 use crate::transparency_reporting::{
     TransparencyReportingSystem, ReportGenerationRequest, ReportGenerationResponse,
-    TransparencyReport, TransparencyNotification, ReportType, NotificationType,
+    TransparencyReport, TransparencyNotification, ReportType,
 };
 
 /// API сервер для системы прозрачности и отчетности

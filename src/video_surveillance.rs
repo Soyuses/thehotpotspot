@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
@@ -492,7 +492,7 @@ impl VideoSurveillanceSystem {
     }
 
     /// Замена лиц
-    async fn replace_faces(&self, frame_data: &[u8], camera_id: &str) -> Result<Vec<u8>, String> {
+    async fn replace_faces(&self, frame_data: &[u8], _camera_id: &str) -> Result<Vec<u8>, String> {
         // Здесь должна быть интеграция с библиотекой компьютерного зрения
         // для обнаружения лиц и замены их на выбранное изображение
         // Пока что возвращаем исходные данные

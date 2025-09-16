@@ -2,8 +2,8 @@
 //! 
 //! This module provides HTTP API endpoints for check generation and management.
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+// use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde_json;
 use std::io::{Read, Write};
@@ -11,8 +11,8 @@ use std::net::{TcpListener, TcpStream};
 use std::thread;
 
 use crate::check_generation::{
-    CheckGenerationService, CheckGenerationRequest, CheckGenerationResponse,
-    CheckClaimRequest, CheckClaimResponse, CheckGenerationConfig, CheckStatistics
+    CheckGenerationService, CheckGenerationRequest,
+    CheckClaimRequest, CheckGenerationConfig
 };
 
 /// Check API server

@@ -4,13 +4,12 @@
 //! according to the new tokenomics model.
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+// use std::collections::HashMap;
 use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use crate::new_tokenomics::{NewTokenomicsManager, SaleRecord, StMinting, KycStatus};
-use crate::new_database::{NewDatabaseManager, User, NewDatabaseConfig};
-use crate::tokenomics_config::TokenomicsConfig;
+use crate::new_database::{NewDatabaseManager, User};
 
 /// Relayer configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]

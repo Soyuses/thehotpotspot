@@ -363,7 +363,7 @@ impl StreamingManager {
     pub async fn stop_stream(&self, stream_id: String) -> Result<(), String> {
         let mut active_streams = self.active_streams.write().await;
         
-        if let Some(mut stream_info) = active_streams.get_mut(&stream_id) {
+        if let Some(stream_info) = active_streams.get_mut(&stream_id) {
             stream_info.status = StreamStatus::Ending;
             stream_info.end_time = Some(
                 std::time::SystemTime::now()
@@ -501,8 +501,8 @@ impl TwitchClient {
 
     pub async fn start_stream(
         &self,
-        stream_id: &str,
-        quality: &StreamQuality,
+        _stream_id: &str,
+        _quality: &StreamQuality,
     ) -> Result<TwitchStreamInfo, String> {
         // Здесь должна быть реальная интеграция с Twitch API
         // Пока что возвращаем заглушку
@@ -549,8 +549,8 @@ impl YouTubeClient {
 
     pub async fn start_stream(
         &self,
-        stream_id: &str,
-        quality: &StreamQuality,
+        _stream_id: &str,
+        _quality: &StreamQuality,
     ) -> Result<YouTubeStreamInfo, String> {
         // Здесь должна быть реальная интеграция с YouTube API
         // Пока что возвращаем заглушку
@@ -599,7 +599,7 @@ impl StreamingWebhookHandler {
     pub async fn handle_twitch_webhook(
         &self,
         payload: &str,
-        signature: &str,
+        _signature: &str,
     ) -> Result<(), String> {
         // Здесь должна быть валидация подписи и обработка веб-хука
         println!("Received Twitch webhook: {}", payload);
@@ -610,7 +610,7 @@ impl StreamingWebhookHandler {
     pub async fn handle_youtube_webhook(
         &self,
         payload: &str,
-        signature: &str,
+        _signature: &str,
     ) -> Result<(), String> {
         // Здесь должна быть валидация подписи и обработка веб-хука
         println!("Received YouTube webhook: {}", payload);

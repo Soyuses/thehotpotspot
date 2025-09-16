@@ -9,8 +9,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use crate::new_tokenomics::{NewTokenomicsManager, UtEvent, UtEventType};
-use crate::new_database::{NewDatabaseManager, User, NewDatabaseConfig};
-use crate::tokenomics_config::TokenomicsConfig;
+use crate::new_database::NewDatabaseManager;
 
 /// Stream collector configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -554,10 +553,10 @@ impl StreamCollector {
     }
 
     /// Check daily UT limit
-    async fn check_daily_limit(&self, user_id: &str, new_units: u128) -> Result<(), String> {
+    async fn check_daily_limit(&self, user_id: &str, _new_units: u128) -> Result<(), String> {
         // Get today's UT events for user
-        let today = Utc::now().date_naive();
-        let user_id_int = user_id.parse::<i32>().map_err(|_| "Invalid user ID")?;
+        let _today = Utc::now().date_naive();
+        let _user_id_int = user_id.parse::<i32>().map_err(|_| "Invalid user ID")?;
 
         // This would need to be implemented in the database manager
         // For now, we'll assume the limit check passes

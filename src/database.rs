@@ -4,10 +4,10 @@
 //! включая миграции, схемы и ORM функциональность.
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
-use chrono::{DateTime, Utc};
+// use std::collections::HashMap;
+// use chrono::{DateTime, Utc};
 use tokio_postgres::{Client, NoTls, Row};
-use tokio_postgres::types::{FromSql, ToSql, Type};
+use tokio_postgres::types::{ToSql};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

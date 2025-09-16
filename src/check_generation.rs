@@ -8,7 +8,7 @@ use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 use qrcode::QrCode;
-use image::{ImageBuffer, Rgb, RgbImage};
+use image::{Rgb};
 use std::io::Cursor;
 
 /// Physical check with QR code for customer journey

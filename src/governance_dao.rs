@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use std::sync::Arc;
 
-use crate::new_tokenomics::{NewTokenomicsManager, KycStatus};
+use crate::new_tokenomics::NewTokenomicsManager;
 use crate::tokenomics_config::TokenomicsConfig;
 
 /// DAO Governance System for The Hot Pot Spot
@@ -499,7 +499,7 @@ impl GovernanceDAO {
     /// Execute a passed proposal
     pub async fn execute_proposal(&mut self, proposal_id: &str, executor: String) -> Result<(), String> {
         // First, get the proposal and check if it can be executed
-        let (proposal_type, voting_end, execution_delay_hours) = {
+        let (proposal_type, _voting_end, _execution_delay_hours) = {
             let proposal = match self.proposals.get(proposal_id) {
                 Some(proposal) => proposal,
                 None => return Err("Proposal not found".to_string()),

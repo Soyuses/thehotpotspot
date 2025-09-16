@@ -10,7 +10,7 @@ use std::time::{SystemTime, UNIX_EPOCH, Duration};
 use sha2::{Sha256, Digest};
 use hex;
 use chrono::{DateTime, Utc};
-use tokio::time::{sleep, interval};
+use tokio::time::sleep;
 use tokio::sync::RwLock;
 
 /// Типы транзакций для relayer

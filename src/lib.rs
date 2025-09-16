@@ -1,3 +1,5 @@
+#![allow(unused_imports, unused_variables, dead_code)]
+
 pub mod config;
 pub mod simple_server;
 pub mod web_server;

@@ -6,7 +6,7 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 use chrono::{DateTime, Utc};
-use crate::tokenomics_config::{TokenomicsConfig, TOKEN_SCALE};
+use crate::tokenomics_config::TokenomicsConfig;
 
 /// Security Token (ST) - Digital shares with dividend rights
 #[derive(Debug, Clone, Serialize, Deserialize)]

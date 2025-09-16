@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc, Duration};
-use crate::recipe_management::{RecipeManager, PurchasePlan, DateRange};
+use crate::recipe_management::{RecipeManager, DateRange};
 
 /// Планировщик закупок
 #[derive(Debug, Clone)]

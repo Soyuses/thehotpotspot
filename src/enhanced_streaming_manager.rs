@@ -4,14 +4,14 @@
 //! с поддержкой множественных платформ и продвинутых функций.
 
 use std::collections::HashMap;
-use serde::{Serialize, Deserialize};
+// use serde::{Serialize, Deserialize};
 use tokio::sync::RwLock;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use crate::streaming_integration::{
     EnhancedStreamingConfig, ActiveStream, StreamType, StreamingPlatform, 
-    StreamLayout, StreamRegion, ChefOverlay, CustomerOverlay, StreamStatistics,
-    PlatformStats, StreamQuality, OverlayPosition
+    StreamLayout, ChefOverlay, CustomerOverlay, StreamStatistics,
+    StreamQuality, OverlayPosition
 };
 
 /// Расширенный менеджер стриминга

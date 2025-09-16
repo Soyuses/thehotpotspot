@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 use serde::{Serialize, Deserialize};
-use tokio::sync::RwLock;
+// use tokio::sync::RwLock;
 use crate::video_surveillance::{
     VideoSurveillanceSystem, VideoSurveillanceAPI, 
-    CameraConfig, CameraType, AnonymizationZone,
+    CameraConfig, AnonymizationZone,
     VideoConsent, ActiveRecording, CameraStats
 };
 

@@ -3,7 +3,7 @@
 //! Обеспечивает анализ покрытия кода тестами и генерацию отчетов
 //! для достижения 100% покрытия.
 
-use std::collections::HashMap;
+// use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use serde::{Serialize, Deserialize};

@@ -3,12 +3,12 @@
 //! This module provides database operations for the new ST/UT tokenomics model.
 
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+// use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use std::time::SystemTime;
 use tokio_postgres::{Client, NoTls, Row};
 use crate::new_tokenomics::{
-    SecurityToken, UtilityToken, SaleRecord, SaleStatus, UtEvent, UtEventType,
+    SaleRecord, SaleStatus, UtEvent, UtEventType,
     StMinting, ConversionRound, ConversionRoundStatus, ConversionAllocation,
     UserBalance, KycStatus
 };

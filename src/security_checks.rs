@@ -310,7 +310,7 @@ impl SecurityValidator {
     /// Validate security for a transaction
     pub async fn validate_security(&mut self, request: SecurityValidationRequest) -> SecurityValidationResponse {
         let mut blocked_reasons = Vec::new();
-        let mut warnings = Vec::new();
+        let warnings = Vec::new();
         let mut recommendations = Vec::new();
         let mut risk_factors = Vec::new();
         let mut total_risk_score = 0u8;
@@ -476,7 +476,7 @@ impl SecurityValidator {
 
     /// Check daily limits
     async fn check_daily_limits(&self, request: &SecurityValidationRequest) -> Result<(), String> {
-        let tokenomics_manager = self.tokenomics_manager.read().await;
+        let _tokenomics_manager = self.tokenomics_manager.read().await;
         
         match request.transaction_type {
             TransactionType::UtEarning => {

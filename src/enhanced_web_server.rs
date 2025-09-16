@@ -4,10 +4,11 @@ use std::io::{Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::path::Path;
 use std::thread;
-use std::sync::{Arc, Mutex};
-use serde_json;
+use std::sync::Arc;
+// use std::sync::Mutex;
+// use serde_json;
 use crate::video_api::VideoHTTPHandler;
-use crate::video_surveillance::VideoSurveillanceSystem;
+// use crate::video_surveillance::VideoSurveillanceSystem;
 
 pub struct EnhancedWebServer {
     port: u16,

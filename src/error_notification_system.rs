@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::sync::{RwLock, mpsc};
 use serde::{Serialize, Deserialize};
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::observability::{LogLevel, AlertSeverity};
+use crate::observability::AlertSeverity;
 
 /// Тип уведомления об ошибке
 #[derive(Debug, Clone, Serialize, Deserialize)]

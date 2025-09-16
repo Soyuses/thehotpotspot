@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use serde::{Serialize, Deserialize};
-use crate::franchise_network::{FranchiseNetwork, FranchiseNode, NodeType};
+use crate::franchise_network::{FranchiseNetwork, FranchiseNode};
 
 // Алгоритм консенсуса: Proof of Sales + Reputation
 #[derive(Debug, Clone, Serialize, Deserialize)]
