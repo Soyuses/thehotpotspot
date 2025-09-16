@@ -1,0 +1,12 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 42a58b4a7afd79fa8130ab5e0712bb2eec637f8adb062d816b7b6767bc809b26 # shrinks to nodes = [(2, OWNER)]
+cc 503b43143a37e5ff2d1bc8e630a028fa8184514e8a240fe0cdf58e3b9cc2fc19 # shrinks to input = "@A_.aa"
+cc 28fefc0b81030b38c92eb495fee40f9f3a8c65bf2d620cafb8322cb7253ea6b6 # shrinks to user_data = [("aaa", "AAA", "aA", Basic)]
+cc 23879469938ba2fa6c6ef5a29d5722d7eef84887779e0ba9cedb07f7dc50bbac # shrinks to input = ".0A0a@"
+cc 89c042e921bc1f0b57d788b5909fbce77c987841b591c3bd918643f4499a0987 # shrinks to input = ".000@A"
+cc 5e95d3020c3653d79a067de05293ce265ef0608bf42bfeb982eae7e23790c411 # shrinks to input = "_@.aA-"

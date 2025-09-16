@@ -353,6 +353,117 @@
             font-weight: bold;
         }
 
+        /* Стили для планирования закупок */
+        .purchase-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .summary-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .summary-value {
+            font-weight: bold;
+            color: #4facfe;
+        }
+
+        .recipes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .recipe-item {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .recipe-item h4 {
+            color: #4facfe;
+            margin-bottom: 5px;
+        }
+
+        .recipe-item p {
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+
+        .recipe-portions {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+        }
+
+        .purchase-plan-details {
+            overflow-x: auto;
+        }
+
+        .purchase-plan-details table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .purchase-plan-details th,
+        .purchase-plan-details td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .purchase-plan-details th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .purchase-plan-details tr:hover {
+            background: #f8f9fa;
+        }
+
+        .efficiency-analysis {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .analysis-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .analysis-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .analysis-value {
+            font-weight: bold;
+            color: #4facfe;
+        }
+
         .stat-item {
             padding: 10px;
             background: white;
@@ -407,6 +518,7 @@
         <div class="tabs">
             <button class="tab active" onclick="showTab('overview')">Обзор</button>
             <button class="tab" onclick="showTab('orders')">Заказы</button>
+            <button class="tab" onclick="showTab('purchase-planning')">План закупок</button>
             <button class="tab" onclick="showTab('video')">Видеопотоки</button>
             <button class="tab" onclick="showTab('analytics')">Аналитика</button>
             <button class="tab" onclick="showTab('settings')">Настройки</button>
@@ -509,6 +621,135 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+        </div>
+
+        <!-- План закупок -->
+        <div id="purchase-planning" class="tab-content">
+            <h2>Планирование закупок</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Автоматический план закупок</h3>
+                    <div class="purchase-summary">
+                        <div class="summary-item">
+                            <span class="summary-label">Планируемые блюда:</span>
+                            <span class="summary-value" id="plannedDishes">0 порций</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Необходимые ингредиенты:</span>
+                            <span class="summary-value" id="requiredIngredients">0 позиций</span>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-label">Ориентировочная стоимость:</span>
+                            <span class="summary-value" id="estimatedCost">0.00 GEL</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="generatePurchasePlan()">Сгенерировать план</button>
+                </div>
+
+                <div class="card">
+                    <h3>Рецепты блюд</h3>
+                    <div class="recipes-list">
+                        <div class="recipe-item">
+                            <h4>Плов</h4>
+                            <p>Рис: 200г, Мясо: 150г, Лук: 50г, Морковь: 50г</p>
+                            <input type="number" placeholder="Количество порций" min="0" class="recipe-portions" data-recipe="pilaf">
+                        </div>
+                        <div class="recipe-item">
+                            <h4>Хачапури</h4>
+                            <p>Тесто: 150г, Сыр: 100г, Яйцо: 1шт, Масло: 20г</p>
+                            <input type="number" placeholder="Количество порций" min="0" class="recipe-portions" data-recipe="khachapuri">
+                        </div>
+                        <div class="recipe-item">
+                            <h4>Шашлык</h4>
+                            <p>Мясо: 300г, Лук: 100г, Специи: 10г, Масло: 30г</p>
+                            <input type="number" placeholder="Количество порций" min="0" class="recipe-portions" data-recipe="shashlik">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Детальный план закупок</h3>
+                <div class="purchase-plan-details">
+                    <table id="purchasePlanTable">
+                        <thead>
+                            <tr>
+                                <th>Ингредиент</th>
+                                <th>Необходимо (кг)</th>
+                                <th>Цена за кг (GEL)</th>
+                                <th>Общая стоимость</th>
+                                <th>Поставщик</th>
+                                <th>Статус</th>
+                            </tr>
+                        </thead>
+                        <tbody id="purchasePlanBody">
+                            <!-- Записи будут добавлены динамически -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Фактические закупки</h3>
+                <form id="actualPurchaseForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Ингредиент:</label>
+                            <select id="purchaseIngredient" required>
+                                <option value="">Выберите ингредиент</option>
+                                <option value="rice">Рис</option>
+                                <option value="meat">Мясо</option>
+                                <option value="onion">Лук</option>
+                                <option value="carrot">Морковь</option>
+                                <option value="cheese">Сыр</option>
+                                <option value="dough">Тесто</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Количество (кг):</label>
+                            <input type="number" id="purchaseAmount" step="0.1" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Цена за кг (GEL):</label>
+                            <input type="number" id="purchasePrice" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Поставщик:</label>
+                            <input type="text" id="purchaseSupplier" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Дата закупки:</label>
+                        <input type="date" id="purchaseDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Занести закупку</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Анализ эффективности</h3>
+                <div class="efficiency-analysis">
+                    <div class="analysis-item">
+                        <span class="analysis-label">Планируемые затраты:</span>
+                        <span class="analysis-value" id="plannedCosts">0.00 GEL</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">Фактические затраты:</span>
+                        <span class="analysis-value" id="actualCosts">0.00 GEL</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">Экономия/Перерасход:</span>
+                        <span class="analysis-value" id="costDifference">0.00 GEL</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">Эффективность:</span>
+                        <span class="analysis-value" id="efficiency">0%</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -768,30 +1009,6 @@
         let franchiseNodeId = 'FranchiseNode1';
         let franchiseOwner = 'FranchiseOwner1';
 
-        function showTab(tabName) {
-            // Скрыть все вкладки
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Показать выбранную вкладку
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-
-            // Загрузить данные для вкладки
-            if (tabName === 'overview') {
-                loadOverviewData();
-            } else if (tabName === 'orders') {
-                loadOrders();
-            } else if (tabName === 'video') {
-                loadVideoStreams();
-            } else if (tabName === 'analytics') {
-                loadAnalytics();
-            }
-        }
 
         function loadOverviewData() {
             // Загрузка данных франшизы
@@ -1367,9 +1584,222 @@
             });
         }
 
+        // Функции для планирования закупок
+        function loadPurchasePlanningData() {
+            updatePurchaseSummary();
+            loadPurchasePlan();
+            updateEfficiencyAnalysis();
+        }
+
+        function updatePurchaseSummary() {
+            // Обновление сводки планирования
+            const plannedDishes = 150; // Примерное количество порций
+            const requiredIngredients = 8; // Количество различных ингредиентов
+            const estimatedCost = 1250.50; // Ориентировочная стоимость
+
+            document.getElementById('plannedDishes').textContent = plannedDishes + ' порций';
+            document.getElementById('requiredIngredients').textContent = requiredIngredients + ' позиций';
+            document.getElementById('estimatedCost').textContent = estimatedCost.toFixed(2) + ' GEL';
+        }
+
+        function generatePurchasePlan() {
+            // Генерация плана закупок на основе введенных порций
+            const recipes = {
+                pilaf: { rice: 0.2, meat: 0.15, onion: 0.05, carrot: 0.05 },
+                khachapuri: { dough: 0.15, cheese: 0.1, egg: 0.001, butter: 0.02 },
+                shashlik: { meat: 0.3, onion: 0.1, spices: 0.01, oil: 0.03 }
+            };
+
+            const portions = {};
+            document.querySelectorAll('.recipe-portions').forEach(input => {
+                const recipe = input.dataset.recipe;
+                const count = parseInt(input.value) || 0;
+                portions[recipe] = count;
+            });
+
+            // Расчет необходимых ингредиентов
+            const ingredients = {};
+            Object.keys(portions).forEach(recipe => {
+                const count = portions[recipe];
+                if (count > 0 && recipes[recipe]) {
+                    Object.keys(recipes[recipe]).forEach(ingredient => {
+                        const amount = recipes[recipe][ingredient] * count;
+                        ingredients[ingredient] = (ingredients[ingredient] || 0) + amount;
+                    });
+                }
+            });
+
+            // Обновление таблицы плана закупок
+            const tbody = document.getElementById('purchasePlanBody');
+            tbody.innerHTML = '';
+
+            const prices = {
+                rice: 3.50,
+                meat: 12.00,
+                onion: 2.00,
+                carrot: 2.50,
+                dough: 4.00,
+                cheese: 8.00,
+                egg: 0.20,
+                butter: 6.00,
+                spices: 15.00,
+                oil: 5.00
+            };
+
+            const suppliers = {
+                rice: 'Поставщик зерна',
+                meat: 'Мясная база',
+                onion: 'Овощной рынок',
+                carrot: 'Овощной рынок',
+                dough: 'Хлебозавод',
+                cheese: 'Молочная ферма',
+                egg: 'Птицефабрика',
+                butter: 'Молочная ферма',
+                spices: 'Специи и приправы',
+                oil: 'Масло и жиры'
+            };
+
+            Object.keys(ingredients).forEach(ingredient => {
+                const amount = ingredients[ingredient];
+                const price = prices[ingredient] || 0;
+                const totalCost = amount * price;
+                const supplier = suppliers[ingredient] || 'Не указан';
+
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${ingredient}</td>
+                    <td>${amount.toFixed(2)}</td>
+                    <td>${price.toFixed(2)}</td>
+                    <td>${totalCost.toFixed(2)}</td>
+                    <td>${supplier}</td>
+                    <td><span class="status pending">Планируется</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Обновление сводки
+            const totalPortions = Object.values(portions).reduce((sum, count) => sum + count, 0);
+            const totalIngredients = Object.keys(ingredients).length;
+            const totalCost = Object.keys(ingredients).reduce((sum, ingredient) => {
+                return sum + (ingredients[ingredient] * (prices[ingredient] || 0));
+            }, 0);
+
+            document.getElementById('plannedDishes').textContent = totalPortions + ' порций';
+            document.getElementById('requiredIngredients').textContent = totalIngredients + ' позиций';
+            document.getElementById('estimatedCost').textContent = totalCost.toFixed(2) + ' GEL';
+        }
+
+        function loadPurchasePlan() {
+            // Загрузка существующего плана закупок
+            const samplePlan = [
+                { ingredient: 'Рис', amount: 30.0, price: 3.50, total: 105.00, supplier: 'Поставщик зерна', status: 'Заказано' },
+                { ingredient: 'Мясо', amount: 22.5, price: 12.00, total: 270.00, supplier: 'Мясная база', status: 'Доставлено' },
+                { ingredient: 'Лук', amount: 7.5, price: 2.00, total: 15.00, supplier: 'Овощной рынок', status: 'Планируется' }
+            ];
+
+            const tbody = document.getElementById('purchasePlanBody');
+            tbody.innerHTML = '';
+
+            samplePlan.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.ingredient}</td>
+                    <td>${item.amount.toFixed(2)}</td>
+                    <td>${item.price.toFixed(2)}</td>
+                    <td>${item.total.toFixed(2)}</td>
+                    <td>${item.supplier}</td>
+                    <td><span class="status ${item.status === 'Доставлено' ? 'confirmed' : item.status === 'Заказано' ? 'pending' : 'pending'}">${item.status}</span></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateEfficiencyAnalysis() {
+            // Обновление анализа эффективности
+            const plannedCosts = 1250.50;
+            const actualCosts = 1180.25;
+            const difference = actualCosts - plannedCosts;
+            const efficiency = ((plannedCosts - actualCosts) / plannedCosts * 100);
+
+            document.getElementById('plannedCosts').textContent = plannedCosts.toFixed(2) + ' GEL';
+            document.getElementById('actualCosts').textContent = actualCosts.toFixed(2) + ' GEL';
+            document.getElementById('costDifference').textContent = difference.toFixed(2) + ' GEL';
+            document.getElementById('efficiency').textContent = efficiency.toFixed(1) + '%';
+
+            // Цветовая индикация
+            const differenceElement = document.getElementById('costDifference');
+            const efficiencyElement = document.getElementById('efficiency');
+            
+            if (difference < 0) {
+                differenceElement.style.color = '#28a745'; // Зеленый для экономии
+                efficiencyElement.style.color = '#28a745';
+            } else {
+                differenceElement.style.color = '#dc3545'; // Красный для перерасхода
+                efficiencyElement.style.color = '#dc3545';
+            }
+        }
+
+        // Обновленная функция showTab
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Показать выбранную вкладку
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+
+            // Загрузить данные для конкретной вкладки
+            if (tabName === 'overview') {
+                loadOverviewData();
+            } else if (tabName === 'orders') {
+                loadOrders();
+            } else if (tabName === 'purchase-planning') {
+                loadPurchasePlanningData();
+            } else if (tabName === 'video') {
+                loadVideoStreams();
+            } else if (tabName === 'analytics') {
+                loadAnalytics();
+            } else if (tabName === 'settings') {
+                loadSettings();
+            }
+        }
+
+        // Обработчик формы фактических закупок
+        document.getElementById('actualPurchaseForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                ingredient: document.getElementById('purchaseIngredient').value,
+                amount: parseFloat(document.getElementById('purchaseAmount').value),
+                price: parseFloat(document.getElementById('purchasePrice').value),
+                supplier: document.getElementById('purchaseSupplier').value,
+                date: document.getElementById('purchaseDate').value
+            };
+
+            // Добавление фактической закупки
+            alert('Закупка занесена:\n' + 
+                  'Ингредиент: ' + formData.ingredient + '\n' +
+                  'Количество: ' + formData.amount + ' кг\n' +
+                  'Цена: ' + formData.price + ' GEL/кг\n' +
+                  'Поставщик: ' + formData.supplier);
+
+            // Очистка формы
+            this.reset();
+            
+            // Обновление анализа эффективности
+            updateEfficiencyAnalysis();
+        });
+
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             loadOverviewData();
+            // Установить сегодняшнюю дату по умолчанию
+            document.getElementById('purchaseDate').value = new Date().toISOString().split('T')[0];
         });
     </script>
 </body>

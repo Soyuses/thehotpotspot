@@ -1,0 +1,100 @@
+import { MD3LightTheme } from 'react-native-paper';
+
+export const theme = {
+  ...MD3LightTheme,
+  colors: {
+    ...MD3LightTheme.colors,
+    primary: '#ff6b6b',
+    primaryContainer: '#ffebee',
+    secondary: '#4facfe',
+    secondaryContainer: '#e3f2fd',
+    tertiary: '#764ba2',
+    surface: '#ffffff',
+    surfaceVariant: '#f5f5f5',
+    background: '#fafafa',
+    error: '#f44336',
+    onPrimary: '#ffffff',
+    onSecondary: '#ffffff',
+    onSurface: '#333333',
+    onBackground: '#333333',
+    outline: '#e0e0e0',
+    shadow: '#000000',
+  },
+  fonts: {
+    ...MD3LightTheme.fonts,
+    headlineLarge: {
+      fontFamily: 'System',
+      fontSize: 32,
+      fontWeight: '400',
+      lineHeight: 40,
+    },
+    headlineMedium: {
+      fontFamily: 'System',
+      fontSize: 28,
+      fontWeight: '400',
+      lineHeight: 36,
+    },
+    headlineSmall: {
+      fontFamily: 'System',
+      fontSize: 24,
+      fontWeight: '400',
+      lineHeight: 32,
+    },
+    titleLarge: {
+      fontFamily: 'System',
+      fontSize: 22,
+      fontWeight: '400',
+      lineHeight: 28,
+    },
+    titleMedium: {
+      fontFamily: 'System',
+      fontSize: 16,
+      fontWeight: '500',
+      lineHeight: 24,
+    },
+    titleSmall: {
+      fontFamily: 'System',
+      fontSize: 14,
+      fontWeight: '500',
+      lineHeight: 20,
+    },
+    bodyLarge: {
+      fontFamily: 'System',
+      fontSize: 16,
+      fontWeight: '400',
+      lineHeight: 24,
+    },
+    bodyMedium: {
+      fontFamily: 'System',
+      fontSize: 14,
+      fontWeight: '400',
+      lineHeight: 20,
+    },
+    bodySmall: {
+      fontFamily: 'System',
+      fontSize: 12,
+      fontWeight: '400',
+      lineHeight: 16,
+    },
+    labelLarge: {
+      fontFamily: 'System',
+      fontSize: 14,
+      fontWeight: '500',
+      lineHeight: 20,
+    },
+    labelMedium: {
+      fontFamily: 'System',
+      fontSize: 12,
+      fontWeight: '500',
+      lineHeight: 16,
+    },
+    labelSmall: {
+      fontFamily: 'System',
+      fontSize: 11,
+      fontWeight: '500',
+      lineHeight: 16,
+    },
+  },
+  roundness: 12,
+};
+

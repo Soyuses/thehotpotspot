@@ -379,8 +379,8 @@ mod tests {
         assert_eq!(config.kyc_required, true);
     }
 
-    #[test]
-    fn test_sale_request_validation() {
+    #[tokio::test]
+    async fn test_sale_request_validation() {
         let config = RelayerConfig::default();
         let service = NewRelayerService::new(
             config,
@@ -405,8 +405,8 @@ mod tests {
         assert!(service.validate_sale_request(&valid_request).is_ok());
     }
 
-    #[test]
-    fn test_st_units_calculation() {
+    #[tokio::test]
+    async fn test_st_units_calculation() {
         let config = RelayerConfig::default();
         let service = NewRelayerService::new(
             config,
@@ -419,8 +419,8 @@ mod tests {
         assert_eq!(service.calculate_st_units(10.0), 1000);
     }
 
-    #[test]
-    fn test_check_address_generation() {
+    #[tokio::test]
+    async fn test_check_address_generation() {
         let config = RelayerConfig::default();
         let service = NewRelayerService::new(
             config,
@@ -433,8 +433,8 @@ mod tests {
         assert!(address.len() > 10);
     }
 
-    #[test]
-    fn test_activation_code_generation() {
+    #[tokio::test]
+    async fn test_activation_code_generation() {
         let config = RelayerConfig::default();
         let service = NewRelayerService::new(
             config,

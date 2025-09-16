@@ -33,38 +33,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         
         // User 1: 5000 UT (can create proposals and vote)
         manager.ut_holders.insert("user_001".to_string(), blockchain_project::new_tokenomics::UtilityToken {
-            user_id: "user_001".to_string(),
+            token_id: "ut_001".to_string(),
+            owner_address: "0xuser_001".to_string(),
+            voting_power: 5000,
+            non_transferable: true,
+            updated_at: chrono::Utc::now(),
             balance: 5000,
-            total_earned: 5000,
-            last_activity: chrono::Utc::now(),
             created_at: chrono::Utc::now(),
+            last_activity: chrono::Utc::now(),
         });
         
         // User 2: 2000 UT (can vote)
         manager.ut_holders.insert("user_002".to_string(), blockchain_project::new_tokenomics::UtilityToken {
-            user_id: "user_002".to_string(),
+            token_id: "ut_002".to_string(),
+            owner_address: "0xuser_002".to_string(),
+            voting_power: 2000,
+            non_transferable: true,
+            updated_at: chrono::Utc::now(),
             balance: 2000,
-            total_earned: 2000,
-            last_activity: chrono::Utc::now(),
             created_at: chrono::Utc::now(),
+            last_activity: chrono::Utc::now(),
         });
         
         // User 3: 1000 UT (can vote)
         manager.ut_holders.insert("user_003".to_string(), blockchain_project::new_tokenomics::UtilityToken {
-            user_id: "user_003".to_string(),
+            token_id: "ut_003".to_string(),
+            owner_address: "0xuser_003".to_string(),
+            voting_power: 1000,
+            non_transferable: true,
+            updated_at: chrono::Utc::now(),
             balance: 1000,
-            total_earned: 1000,
-            last_activity: chrono::Utc::now(),
             created_at: chrono::Utc::now(),
+            last_activity: chrono::Utc::now(),
         });
         
         // User 4: 50 UT (cannot vote - below minimum)
         manager.ut_holders.insert("user_004".to_string(), blockchain_project::new_tokenomics::UtilityToken {
-            user_id: "user_004".to_string(),
+            token_id: "ut_004".to_string(),
+            owner_address: "0xuser_004".to_string(),
+            voting_power: 50,
+            non_transferable: true,
+            updated_at: chrono::Utc::now(),
             balance: 50,
-            total_earned: 50,
-            last_activity: chrono::Utc::now(),
             created_at: chrono::Utc::now(),
+            last_activity: chrono::Utc::now(),
         });
     }
 

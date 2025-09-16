@@ -1,308 +1,184 @@
 import React, { useState } from 'react';
 import {
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
+  Alert,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-
-import useAppStore from '../store';
+import {
+  Text,
+  TextInput,
+  Button,
+  Card,
+  Title,
+  Paragraph,
+  ActivityIndicator,
+} from 'react-native-paper';
+import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 
 const LoginScreen: React.FC = () => {
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [walletAddress, setWalletAddress] = useState('');
-  const [verificationCode, setVerificationCode] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
+  const { theme } = useTheme();
 
-  const { registerUser, verifyUser, isLoading, error } = useAppStore();
-
-  const handleRegister = async () => {
-    if (!phoneNumber.trim() || !walletAddress.trim()) {
+  const handleLogin = async () => {
+    if (!phone.trim() || !password.trim()) {
       Alert.alert('Ошибка', 'Пожалуйста, заполните все поля');
       return;
     }
 
-    setIsRegistering(true);
-    const success = await registerUser(phoneNumber.trim(), walletAddress.trim());
-    setIsRegistering(false);
-
-    if (success) {
-      Alert.alert(
-        'Успешно!',
-        'Код подтверждения отправлен на ваш номер телефона',
-        [{ text: 'OK' }]
-      );
-      setIsVerifying(true);
-    } else {
-      Alert.alert('Ошибка', error || 'Не удалось зарегистрироваться');
-    }
-  };
-
-  const handleVerify = async () => {
-    if (!verificationCode.trim()) {
-      Alert.alert('Ошибка', 'Пожалуйста, введите код подтверждения');
+    if (phone.length < 10) {
+      Alert.alert('Ошибка', 'Номер телефона должен содержать минимум 10 цифр');
       return;
     }
 
-    const success = await verifyUser(phoneNumber.trim(), verificationCode.trim());
-    
-    if (success) {
-      Alert.alert('Успешно!', 'Вы успешно авторизованы в системе');
-    } else {
-      Alert.alert('Ошибка', error || 'Неверный код подтверждения');
+    if (password.length < 6) {
+      Alert.alert('Ошибка', 'Пароль должен содержать минимум 6 символов');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const success = await login(phone.trim(), password);
+      
+      if (!success) {
+        Alert.alert('Ошибка', 'Неверный номер телефона или пароль');
+      }
+    } catch (error) {
+      Alert.alert('Ошибка', 'Произошла ошибка при входе в систему');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleBackToRegister = () => {
-    setIsVerifying(false);
-    setVerificationCode('');
-  };
-
   return (
-    <LinearGradient
-      colors={['#667eea', '#764ba2']}
+    <KeyboardAvoidingView
       style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContainer}>
-          <View style={styles.header}>
-            <Icon name="restaurant" size={80} color="#fff" />
-            <Text style={styles.title}>Blockchain Food Truck</Text>
-            <Text style={styles.subtitle}>Децентрализованная сеть фудтраков</Text>
-          </View>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <Title style={[styles.title, { color: theme.colors.primary }]}>
+            The Hot Pot Spot
+          </Title>
+          <Paragraph style={[styles.subtitle, { color: theme.colors.onSurface }]}>
+            Войдите в свой аккаунт
+          </Paragraph>
+        </View>
 
-          <View style={styles.formContainer}>
-            {!isVerifying ? (
-              // Форма регистрации
-              <>
-                <Text style={styles.formTitle}>Регистрация</Text>
-                
-                <View style={styles.inputContainer}>
-                  <Icon name="phone" size={24} color="#667eea" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Номер телефона"
-                    placeholderTextColor="#999"
-                    value={phoneNumber}
-                    onChangeText={setPhoneNumber}
-                    keyboardType="phone-pad"
-                    autoCapitalize="none"
-                  />
-                </View>
+        <Card style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+          <Card.Content style={styles.cardContent}>
+            <TextInput
+              label="Номер телефона"
+              value={phone}
+              onChangeText={setPhone}
+              mode="outlined"
+              keyboardType="phone-pad"
+              placeholder="+995 123 456 789"
+              style={styles.input}
+              disabled={isLoading}
+            />
 
-                <View style={styles.inputContainer}>
-                  <Icon name="account-balance-wallet" size={24} color="#667eea" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Адрес кошелька"
-                    placeholderTextColor="#999"
-                    value={walletAddress}
-                    onChangeText={setWalletAddress}
-                    autoCapitalize="none"
-                    multiline
-                  />
-                </View>
+            <TextInput
+              label="Пароль"
+              value={password}
+              onChangeText={setPassword}
+              mode="outlined"
+              secureTextEntry
+              placeholder="Введите пароль"
+              style={styles.input}
+              disabled={isLoading}
+            />
 
-                <TouchableOpacity
-                  style={[styles.button, isLoading && styles.buttonDisabled]}
-                  onPress={handleRegister}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <Icon name="person-add" size={24} color="#fff" />
-                      <Text style={styles.buttonText}>Зарегистрироваться</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </>
-            ) : (
-              // Форма верификации
-              <>
-                <Text style={styles.formTitle}>Подтверждение</Text>
-                <Text style={styles.verificationText}>
-                  Введите код подтверждения, отправленный на номер {phoneNumber}
-                </Text>
+            <Button
+              mode="contained"
+              onPress={handleLogin}
+              style={[styles.loginButton, { backgroundColor: theme.colors.primary }]}
+              contentStyle={styles.buttonContent}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={theme.colors.onPrimary} size="small" />
+              ) : (
+                'Войти'
+              )}
+            </Button>
+          </Card.Content>
+        </Card>
 
-                <View style={styles.inputContainer}>
-                  <Icon name="security" size={24} color="#667eea" style={styles.inputIcon} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Код подтверждения"
-                    placeholderTextColor="#999"
-                    value={verificationCode}
-                    onChangeText={setVerificationCode}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[styles.button, isLoading && styles.buttonDisabled]}
-                  onPress={handleVerify}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <Icon name="check-circle" size={24} color="#fff" />
-                      <Text style={styles.buttonText}>Подтвердить</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={handleBackToRegister}
-                >
-                  <Icon name="arrow-back" size={20} color="#667eea" />
-                  <Text style={styles.backButtonText}>Назад к регистрации</Text>
-                </TouchableOpacity>
-              </>
-            )}
-          </View>
-
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>
-              Используя приложение, вы соглашаетесь с условиями использования
+        <View style={styles.footer}>
+          <Paragraph style={[styles.footerText, { color: theme.colors.onSurface }]}>
+            Нет аккаунта?{' '}
+            <Text
+              style={[styles.linkText, { color: theme.colors.primary }]}
+              onPress={() => {
+                // Navigate to register screen
+                console.log('Navigate to register');
+              }}
+            >
+              Зарегистрироваться
             </Text>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </LinearGradient>
+          </Paragraph>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  keyboardAvoidingView: {
-    flex: 1,
-  },
-  scrollContainer: {
+  scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 30,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#fff',
-    marginTop: 20,
-    textAlign: 'center',
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#fff',
-    opacity: 0.9,
-    marginTop: 10,
     textAlign: 'center',
   },
-  formContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 30,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 30,
-  },
-  verificationText: {
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-    marginBottom: 30,
-    lineHeight: 22,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+  card: {
+    elevation: 4,
     borderRadius: 12,
-    marginBottom: 20,
-    paddingHorizontal: 15,
-    borderWidth: 2,
-    borderColor: '#e9ecef',
   },
-  inputIcon: {
-    marginRight: 10,
+  cardContent: {
+    padding: 20,
   },
   input: {
-    flex: 1,
-    paddingVertical: 15,
-    fontSize: 16,
-    color: '#333',
+    marginBottom: 16,
   },
-  button: {
-    backgroundColor: '#667eea',
-    borderRadius: 12,
-    paddingVertical: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
+  loginButton: {
+    marginTop: 8,
+    borderRadius: 8,
   },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 10,
-  },
-  backButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  backButtonText: {
-    color: '#667eea',
-    fontSize: 16,
-    marginLeft: 5,
+  buttonContent: {
+    paddingVertical: 8,
   },
   footer: {
-    marginTop: 30,
     alignItems: 'center',
+    marginTop: 20,
   },
   footerText: {
-    color: '#fff',
-    fontSize: 12,
-    opacity: 0.8,
-    textAlign: 'center',
-    lineHeight: 18,
+    fontSize: 14,
+  },
+  linkText: {
+    fontWeight: 'bold',
   },
 });
 

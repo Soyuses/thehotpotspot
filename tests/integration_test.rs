@@ -7,7 +7,7 @@ use blockchain_project::{
     new_tokenomics::{NewTokenomicsManager, SaleRecord, UtEvent, UtEventType, SaleStatus},
     security_checks::{SecurityValidator, SecurityValidationRequest, KycValidationRequest, TransactionType, DocumentType, DocumentInfo},
     governance_dao::{GovernanceDAO, CreateProposalRequest, VoteRequest, ProposalType, VoteChoice},
-    viewer_arm::{ViewerARM, ViewerLoginRequest, KYCRegistrationRequest, StreamingPlatform},
+    viewer_arm::{ViewerARM, ViewerLoginRequest, KYCRegistrationRequest},
     kyc_aml::KYCAmlManager,
 };
 
@@ -116,8 +116,9 @@ async fn test_complete_system_flow() {
         voting_duration_hours: 24,
     };
 
-    let proposal_response = dao.create_proposal(proposal_request).await.unwrap();
-    let proposal_id = proposal_response.proposal_id;
+    let proposal_response = dao.create_proposal(proposal_request).await;
+    assert!(proposal_response.success);
+    let proposal_id = proposal_response.proposal_id.expect("Proposal ID should be present");
     assert!(!proposal_id.is_empty());
 
     // Test 6: DAO Voting
@@ -128,16 +129,19 @@ async fn test_complete_system_flow() {
         choice: VoteChoice::Yes,
     };
 
-    assert!(dao.cast_vote(vote_request).await.is_ok());
+    let vote_response = dao.cast_vote(vote_request).await;
+    assert!(vote_response.success);
 
     // Test 7: Viewer ARM Login
     println!("🎮 Test 7: Viewer ARM Login");
     let login_request = ViewerLoginRequest {
         nickname: "test_user".to_string(),
-        phone: "+995 555 123 456".to_string(),
+        platform: "twitch".to_string(),
+        phone: Some("+995 555 123 456".to_string()),
     };
 
-    let login_response = viewer_arm.authenticate_viewer(login_request).await.unwrap();
+    let login_response = viewer_arm.login_viewer(login_request).await;
+    assert!(login_response.success);
     assert!(login_response.success);
 
     // Test 8: Conversion Round
@@ -247,8 +251,9 @@ async fn test_dao_governance() {
         voting_duration_hours: 24,
     };
 
-    let proposal_response = dao.create_proposal(proposal_request).await.unwrap();
-    let proposal_id = proposal_response.proposal_id;
+    let proposal_response = dao.create_proposal(proposal_request).await;
+    assert!(proposal_response.success);
+    let proposal_id = proposal_response.proposal_id.expect("Proposal ID should be present");
     assert!(!proposal_id.is_empty());
 
     // Vote on proposal
@@ -258,7 +263,8 @@ async fn test_dao_governance() {
         choice: VoteChoice::Yes,
     };
 
-    assert!(dao.cast_vote(vote_request).await.is_ok());
+    let vote_response = dao.cast_vote(vote_request).await;
+    assert!(vote_response.success);
 
     // Check proposal status
     let proposal = dao.get_proposal(&proposal_id).unwrap();
@@ -279,38 +285,44 @@ async fn test_viewer_arm() {
     // Test login
     let login_request = ViewerLoginRequest {
         nickname: "test_user".to_string(),
-        phone: "+995 555 123 456".to_string(),
+        platform: "twitch".to_string(),
+        phone: Some("+995 555 123 456".to_string()),
     };
 
-    let login_response = viewer_arm.authenticate_viewer(login_request).await.unwrap();
+    let login_response = viewer_arm.login_viewer(login_request).await;
+    assert!(login_response.success);
     assert!(login_response.success);
 
     // Test registration
     let registration_request = KYCRegistrationRequest {
-        user_id: "user_001".to_string(),
+        session_id: "session_001".to_string(),
         full_name: "John Doe".to_string(),
         phone: "+995 555 123 456".to_string(),
         email: "john.doe@example.com".to_string(),
         password: "SecurePassword123!".to_string(),
         tshirt_size: "L".to_string(),
         favorite_dish: "Plov".to_string(),
+        qr_code: Some("qr123456789".to_string()),
     };
 
-    let registration_response = viewer_arm.register_for_kyc(registration_request).await.unwrap();
+    let registration_response = viewer_arm.register_for_kyc(registration_request).await;
+    assert!(registration_response.success);
     assert!(registration_response.success);
 
     // Test streaming activity
     use blockchain_project::viewer_arm::UTActivityRequest;
     let streaming_request = UTActivityRequest {
-        user_id: "user_001".to_string(),
-        activity_type: blockchain_project::viewer_arm::UTActivityType::Streaming,
-        duration_minutes: 30,
-        platform: "twitch".to_string(),
+        session_id: "session_001".to_string(),
+        reference: "stream_001".to_string(),
+        count: Some(30),
+        activity_type: "streaming".to_string(),
+        duration_minutes: Some(30),
     };
 
-    let streaming_response = viewer_arm.record_ut_activity(streaming_request).await.unwrap();
+    let streaming_response = viewer_arm.record_ut_activity(streaming_request).await;
     assert!(streaming_response.success);
-    assert!(streaming_response.ut_earned > 0);
+    assert!(streaming_response.success);
+    assert!(streaming_response.ut_earned > Some(0));
 
     println!("✅ Viewer ARM tests passed!");
 }

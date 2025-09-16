@@ -200,6 +200,117 @@
             color: #333;
         }
 
+        /* Стили для учета затрат */
+        .cost-summary {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .cost-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #ff6b6b;
+        }
+
+        .cost-item.total {
+            background: #e3f2fd;
+            border-left-color: #2196f3;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+
+        .cost-label {
+            font-weight: 500;
+            color: #333;
+        }
+
+        .cost-value {
+            font-weight: bold;
+            color: #ff6b6b;
+        }
+
+        .token-calculation {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .calculation-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .calculation-item.result {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+            font-weight: bold;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .cost-history {
+            overflow-x: auto;
+        }
+
+        .cost-history table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .cost-history th,
+        .cost-history td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .cost-history th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .cost-history tr:hover {
+            background: #f8f9fa;
+        }
+
+        .transparency-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .transparency-item {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #28a745;
+        }
+
+        .transparency-item h4 {
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        .transparency-item p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+
         .ratio-info {
             text-align: center;
             background: #e3f2fd;
@@ -370,6 +481,7 @@
             <button class="tab active" onclick="showTab('monitoring')">Мониторинг</button>
             <button class="tab" onclick="showTab('franchises')">Франшизы</button>
             <button class="tab" onclick="showTab('token-emission')">Эмиссия токенов</button>
+            <button class="tab" onclick="showTab('cost-accounting')">Учет затрат</button>
             <button class="tab" onclick="showTab('unclaimed')">Невостребованные</button>
             <button class="tab" onclick="showTab('security')">Безопасность</button>
         </div>
@@ -484,6 +596,136 @@
             </div>
         </div>
 
+        <!-- Учет затрат -->
+        <div id="cost-accounting" class="tab-content">
+            <h2>Система учета затрат</h2>
+            
+            <div class="grid">
+                <div class="card">
+                    <h3>Общие затраты сети</h3>
+                    <div class="cost-summary">
+                        <div class="cost-item">
+                            <span class="cost-label">Сырье и ингредиенты:</span>
+                            <span class="cost-value" id="ingredientsCost">0.00 GEL</span>
+                        </div>
+                        <div class="cost-item">
+                            <span class="cost-label">Аренда и коммунальные:</span>
+                            <span class="cost-value" id="rentCost">0.00 GEL</span>
+                        </div>
+                        <div class="cost-item">
+                            <span class="cost-label">Зарплата персонала:</span>
+                            <span class="cost-value" id="salaryCost">0.00 GEL</span>
+                        </div>
+                        <div class="cost-item">
+                            <span class="cost-label">Маркетинг и реклама:</span>
+                            <span class="cost-value" id="marketingCost">0.00 GEL</span>
+                        </div>
+                        <div class="cost-item total">
+                            <span class="cost-label">Общие затраты:</span>
+                            <span class="cost-value" id="totalCost">0.00 GEL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Расчет токенов</h3>
+                    <div class="token-calculation">
+                        <div class="calculation-item">
+                            <span>Затраты на эмиссию:</span>
+                            <span id="emissionCost">0.00 GEL</span>
+                        </div>
+                        <div class="calculation-item">
+                            <span>Курс эмиссии:</span>
+                            <span>1 THP = 5 GEL затрат</span>
+                        </div>
+                        <div class="calculation-item result">
+                            <span>Токенов к эмиссии:</span>
+                            <span id="tokensToEmit">0 THP</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Добавить затраты</h3>
+                <form id="costForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Категория затрат:</label>
+                            <select id="costCategory" required>
+                                <option value="">Выберите категорию</option>
+                                <option value="ingredients">Сырье и ингредиенты</option>
+                                <option value="rent">Аренда и коммунальные</option>
+                                <option value="salary">Зарплата персонала</option>
+                                <option value="marketing">Маркетинг и реклама</option>
+                                <option value="other">Прочие расходы</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Сумма (GEL):</label>
+                            <input type="number" id="costAmount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Описание:</label>
+                        <textarea id="costDescription" rows="3" placeholder="Детальное описание затрат..."></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Дата:</label>
+                            <input type="date" id="costDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Франшиза:</label>
+                            <select id="franchiseId">
+                                <option value="network">Вся сеть</option>
+                                <option value="franchise_001">Франшиза 001</option>
+                                <option value="franchise_002">Франшиза 002</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Добавить затраты</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>История затрат</h3>
+                <div class="cost-history">
+                    <table id="costHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Категория</th>
+                                <th>Сумма</th>
+                                <th>Описание</th>
+                                <th>Франшиза</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="costHistoryBody">
+                            <!-- Записи будут добавлены динамически -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>Прозрачность и отчетность</h3>
+                <div class="transparency-section">
+                    <div class="transparency-item">
+                        <h4>Публичные отчеты</h4>
+                        <p>Все затраты автоматически публикуются в блокчейне для обеспечения прозрачности.</p>
+                        <button class="btn btn-secondary" onclick="generateTransparencyReport()">Сгенерировать отчет</button>
+                    </div>
+                    <div class="transparency-item">
+                        <h4>API для проверки</h4>
+                        <p>Покупатели могут проверить расчет токенов через публичный API.</p>
+                        <button class="btn btn-secondary" onclick="showAPIDocumentation()">Документация API</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Невостребованные токены -->
         <div id="unclaimed" class="tab-content">
             <h2>Управление невостребованными токенами</h2>
@@ -520,30 +762,6 @@
     </div>
 
     <script>
-        function showTab(tabName) {
-            // Скрыть все вкладки
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-
-            // Показать выбранную вкладку
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-
-            // Загрузить данные для вкладки
-            if (tabName === 'monitoring') {
-                loadMonitoringData();
-            } else if (tabName === 'franchises') {
-                loadFranchises();
-            } else if (tabName === 'unclaimed') {
-                loadUnclaimedTokens();
-            } else if (tabName === 'security') {
-                loadSecurityReport();
-            }
-        }
 
         function loadMonitoringData() {
             // Загрузка данных мониторинга
@@ -946,9 +1164,142 @@
             }, 5000);
         }
 
+        // Функции для учета затрат
+        function loadCostAccountingData() {
+            // Загрузка данных о затратах
+            updateCostSummary();
+            loadCostHistory();
+        }
+
+        function updateCostSummary() {
+            // Обновление сводки затрат
+            const costs = {
+                ingredients: 1250.50,
+                rent: 800.00,
+                salary: 2100.00,
+                marketing: 450.75,
+                other: 200.25
+            };
+
+            document.getElementById('ingredientsCost').textContent = costs.ingredients.toFixed(2) + ' GEL';
+            document.getElementById('rentCost').textContent = costs.rent.toFixed(2) + ' GEL';
+            document.getElementById('salaryCost').textContent = costs.salary.toFixed(2) + ' GEL';
+            document.getElementById('marketingCost').textContent = costs.marketing.toFixed(2) + ' GEL';
+
+            const total = Object.values(costs).reduce((sum, cost) => sum + cost, 0);
+            document.getElementById('totalCost').textContent = total.toFixed(2) + ' GEL';
+
+            // Расчет токенов (1 THP = 5 GEL затрат)
+            const tokensToEmit = Math.floor(total / 5);
+            document.getElementById('emissionCost').textContent = total.toFixed(2) + ' GEL';
+            document.getElementById('tokensToEmit').textContent = tokensToEmit + ' THP';
+        }
+
+        function loadCostHistory() {
+            // Загрузка истории затрат
+            const costHistory = [
+                { date: '2024-01-15', category: 'Сырье и ингредиенты', amount: 250.50, description: 'Закупка риса и мяса', franchise: 'Франшиза 001' },
+                { date: '2024-01-14', category: 'Зарплата персонала', amount: 500.00, description: 'Зарплата за неделю', franchise: 'Вся сеть' },
+                { date: '2024-01-13', category: 'Аренда и коммунальные', amount: 200.00, description: 'Аренда помещения', franchise: 'Франшиза 002' }
+            ];
+
+            const tbody = document.getElementById('costHistoryBody');
+            tbody.innerHTML = '';
+
+            costHistory.forEach(cost => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${cost.date}</td>
+                    <td>${cost.category}</td>
+                    <td>${cost.amount.toFixed(2)} GEL</td>
+                    <td>${cost.description}</td>
+                    <td>${cost.franchise}</td>
+                    <td>
+                        <button class="btn btn-sm btn-secondary" onclick="editCost('${cost.date}')">Редактировать</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCost('${cost.date}')">Удалить</button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function generateTransparencyReport() {
+            alert('Генерация отчета о прозрачности...\nОтчет будет опубликован в блокчейне для всеобщего доступа.');
+        }
+
+        function showAPIDocumentation() {
+            alert('API документация:\n\nGET /api/costs/transparency - Получить данные о затратах\nGET /api/costs/calculation - Получить расчет токенов\nPOST /api/costs/verify - Проверить корректность расчета');
+        }
+
+        function editCost(costId) {
+            alert('Редактирование затраты: ' + costId);
+        }
+
+        function deleteCost(costId) {
+            if (confirm('Вы уверены, что хотите удалить эту запись о затратах?')) {
+                alert('Затрата удалена: ' + costId);
+                loadCostHistory();
+            }
+        }
+
+        // Обновленная функция showTab
+        function showTab(tabName) {
+            // Скрыть все вкладки
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Показать выбранную вкладку
+            document.getElementById(tabName).classList.add('active');
+            document.querySelector(`[onclick="showTab('${tabName}')"]`).classList.add('active');
+
+            // Загрузить данные для конкретной вкладки
+            if (tabName === 'monitoring') {
+                loadMonitoringData();
+            } else if (tabName === 'franchises') {
+                loadFranchises();
+            } else if (tabName === 'cost-accounting') {
+                loadCostAccountingData();
+            } else if (tabName === 'unclaimed') {
+                loadUnclaimedTokens();
+            } else if (tabName === 'security') {
+                loadSecurityReport();
+            }
+        }
+
+        // Обработчик формы затрат
+        document.getElementById('costForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                category: document.getElementById('costCategory').value,
+                amount: parseFloat(document.getElementById('costAmount').value),
+                description: document.getElementById('costDescription').value,
+                date: document.getElementById('costDate').value,
+                franchise: document.getElementById('franchiseId').value
+            };
+
+            // Добавление новой записи о затратах
+            alert('Затраты добавлены:\n' + 
+                  'Категория: ' + formData.category + '\n' +
+                  'Сумма: ' + formData.amount + ' GEL\n' +
+                  'Дата: ' + formData.date);
+
+            // Очистка формы
+            this.reset();
+            
+            // Обновление данных
+            loadCostAccountingData();
+        });
+
         // Инициализация
         document.addEventListener('DOMContentLoaded', function() {
             loadMonitoringData();
+            // Установить сегодняшнюю дату по умолчанию
+            document.getElementById('costDate').value = new Date().toISOString().split('T')[0];
         });
     </script>
 </body>

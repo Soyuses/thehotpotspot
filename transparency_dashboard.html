@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Прозрачность и отчетность - The Hot Pot Spot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #ff6b6b;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+            line-height: 1.6;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card h2 {
+            color: #4facfe;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-icon {
+            width: 24px;
+            height: 24px;
+            background: #4facfe;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(86, 171, 47, 0.4);
+        }
+
+        .reports-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .reports-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .reports-header h2 {
+            color: #4facfe;
+            font-size: 1.6em;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            padding: 8px 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            background: white;
+            font-size: 0.9em;
+            color: #333;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .reports-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .report-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            padding: 20px;
+            border-left: 4px solid #4facfe;
+            transition: all 0.3s ease;
+        }
+
+        .report-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .report-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .report-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .report-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-generating {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-published {
+            background: #cce5ff;
+            color: #004085;
+        }
+
+        .report-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .meta-item {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .meta-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .report-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+
+        .notifications-section {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .notification-item {
+            background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffc107;
+        }
+
+        .notification-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 5px;
+        }
+
+        .notification-message {
+            color: #856404;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .notification-time {
+            color: #6c757d;
+            font-size: 0.8em;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .reports-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .filter-controls {
+                justify-content: center;
+            }
+
+            .report-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .report-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Прозрачность и отчетность</h1>
+            <p>Полная прозрачность затрат, выручки и эмиссии токенов для обеспечения доверия и подотчетности</p>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h2>
+                    <div class="card-icon">📊</div>
+                    Общая статистика
+                </h2>
+                <div class="stats-grid" id="generalStats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalReports">-</div>
+                        <div class="stat-label">Отчетов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalRevenue">-</div>
+                        <div class="stat-label">Выручка (GEL)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalCosts">-</div>
+                        <div class="stat-label">Затраты (GEL)</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="profitMargin">-</div>
+                        <div class="stat-label">Рентабельность</div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="generateReport()">
+                        📈 Создать отчет
+                    </button>
+                    <button class="btn btn-secondary" onclick="refreshDashboard()">
+                        🔄 Обновить
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>
+                    <div class="card-icon">🪙</div>
+                    Токеномика
+                </h2>
+                <div class="stats-grid" id="tokenStats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="stEmitted">-</div>
+                        <div class="stat-label">ST эмитировано</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="utEarned">-</div>
+                        <div class="stat-label">UT заработано</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="conversionRounds">-</div>
+                        <div class="stat-label">Раунды конвертации</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="daoProposals">-</div>
+                        <div class="stat-label">DAO предложения</div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-success" onclick="viewTokenomics()">
+                        🪙 Детали токеномики
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>
+                    <div class="card-icon">⚡</div>
+                    Эффективность
+                </h2>
+                <div class="stats-grid" id="efficiencyStats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="costEfficiency">-</div>
+                        <div class="stat-label">Эффективность затрат</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="tokenEfficiency">-</div>
+                        <div class="stat-label">Эффективность токенов</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="emissionRate">-</div>
+                        <div class="stat-label">Ставка эмиссии</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="costPerToken">-</div>
+                        <div class="stat-label">Стоимость токена</div>
+                    </div>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn btn-primary" onclick="analyzeEfficiency()">
+                        📊 Анализ эффективности
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="reports-section">
+            <div class="reports-header">
+                <h2>📋 Отчеты о прозрачности</h2>
+                <div class="filter-controls">
+                    <select class="filter-select" id="reportTypeFilter" onchange="filterReports()">
+                        <option value="">Все типы</option>
+                        <option value="daily">Ежедневные</option>
+                        <option value="weekly">Еженедельные</option>
+                        <option value="monthly">Ежемесячные</option>
+                        <option value="quarterly">Квартальные</option>
+                        <option value="annual">Годовые</option>
+                    </select>
+                    <select class="filter-select" id="statusFilter" onchange="filterReports()">
+                        <option value="">Все статусы</option>
+                        <option value="completed">Завершенные</option>
+                        <option value="generating">Генерирующиеся</option>
+                        <option value="published">Опубликованные</option>
+                    </select>
+                </div>
+            </div>
+            <div class="reports-list" id="reportsList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Загрузка отчетов...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="notifications-section">
+            <h2>🔔 Уведомления о прозрачности</h2>
+            <div id="notificationsList">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Загрузка уведомлений...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api/transparency';
+
+        // Загрузка данных дашборда
+        async function loadDashboardData() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/dashboard`);
+                const data = await response.json();
+
+                // Обновляем общую статистику
+                updateGeneralStats(data.statistics);
+                
+                // Обновляем статистику токеномики
+                updateTokenStats(data.statistics);
+                
+                // Загружаем отчеты
+                loadReports();
+                
+                // Загружаем уведомления
+                loadNotifications();
+                
+            } catch (error) {
+                console.error('Ошибка загрузки данных дашборда:', error);
+                showError('Не удалось загрузить данные дашборда');
+            }
+        }
+
+        // Обновление общей статистики
+        function updateGeneralStats(stats) {
+            document.getElementById('totalReports').textContent = stats.total_reports || 0;
+            document.getElementById('totalRevenue').textContent = '0.00';
+            document.getElementById('totalCosts').textContent = '0.00';
+            document.getElementById('profitMargin').textContent = '0.0%';
+        }
+
+        // Обновление статистики токеномики
+        function updateTokenStats(stats) {
+            document.getElementById('stEmitted').textContent = (stats.total_st_emitted || 0).toLocaleString();
+            document.getElementById('utEarned').textContent = (stats.total_ut_earned || 0).toLocaleString();
+            document.getElementById('conversionRounds').textContent = stats.conversion_rounds || 0;
+            document.getElementById('daoProposals').textContent = stats.dao_proposals || 0;
+        }
+
+        // Загрузка отчетов
+        async function loadReports() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reports`);
+                const reports = await response.json();
+                
+                displayReports(reports);
+            } catch (error) {
+                console.error('Ошибка загрузки отчетов:', error);
+                document.getElementById('reportsList').innerHTML = 
+                    '<div class="error">Не удалось загрузить отчеты</div>';
+            }
+        }
+
+        // Отображение отчетов
+        function displayReports(reports) {
+            const reportsList = document.getElementById('reportsList');
+            
+            if (reports.length === 0) {
+                reportsList.innerHTML = '<div class="error">Отчеты не найдены</div>';
+                return;
+            }
+
+            reportsList.innerHTML = reports.map(report => `
+                <div class="report-item">
+                    <div class="report-header">
+                        <div class="report-title">${getReportTypeLabel(report.report_type)} - ${formatDate(report.period_start)}</div>
+                        <div class="report-status status-${report.status.toLowerCase()}">${getStatusLabel(report.status)}</div>
+                    </div>
+                    <div class="report-meta">
+                        <div class="meta-item">
+                            <span class="meta-label">Период:</span> ${formatDate(report.period_start)} - ${formatDate(report.period_end)}
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Создан:</span> ${formatDate(report.generated_at)}
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Автор:</span> ${report.generated_by}
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Выручка:</span> ${report.data.total_revenue.toFixed(2)} GEL
+                        </div>
+                    </div>
+                    <div class="report-actions">
+                        <button class="btn btn-primary btn-small" onclick="viewReport('${report.report_id}')">
+                            👁️ Просмотр
+                        </button>
+                        <button class="btn btn-secondary btn-small" onclick="exportReport('${report.report_id}', 'json')">
+                            📄 JSON
+                        </button>
+                        <button class="btn btn-secondary btn-small" onclick="exportReport('${report.report_id}', 'csv')">
+                            📊 CSV
+                        </button>
+                        ${report.status === 'completed' ? `
+                            <button class="btn btn-success btn-small" onclick="publishReport('${report.report_id}')">
+                                📢 Опубликовать
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Загрузка уведомлений
+        async function loadNotifications() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/notifications?limit=10`);
+                const notifications = await response.json();
+                
+                displayNotifications(notifications);
+            } catch (error) {
+                console.error('Ошибка загрузки уведомлений:', error);
+                document.getElementById('notificationsList').innerHTML = 
+                    '<div class="error">Не удалось загрузить уведомления</div>';
+            }
+        }
+
+        // Отображение уведомлений
+        function displayNotifications(notifications) {
+            const notificationsList = document.getElementById('notificationsList');
+            
+            if (notifications.length === 0) {
+                notificationsList.innerHTML = '<div class="error">Уведомления не найдены</div>';
+                return;
+            }
+
+            notificationsList.innerHTML = notifications.map(notification => `
+                <div class="notification-item">
+                    <div class="notification-title">${notification.title}</div>
+                    <div class="notification-message">${notification.message}</div>
+                    <div class="notification-time">${formatDate(notification.created_at)}</div>
+                </div>
+            `).join('');
+        }
+
+        // Генерация отчета
+        async function generateReport() {
+            const reportType = prompt('Выберите тип отчета:\n1. daily\n2. weekly\n3. monthly\n4. quarterly\n5. annual');
+            if (!reportType) return;
+
+            const reportTypes = {
+                '1': 'daily',
+                '2': 'weekly', 
+                '3': 'monthly',
+                '4': 'quarterly',
+                '5': 'annual'
+            };
+
+            const selectedType = reportTypes[reportType];
+            if (!selectedType) {
+                alert('Неверный тип отчета');
+                return;
+            }
+
+            try {
+                const now = new Date();
+                const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+                const request = {
+                    report_type: selectedType,
+                    period_start: startDate.toISOString(),
+                    period_end: endDate.toISOString(),
+                    include_details: true,
+                    include_recommendations: true,
+                    generated_by: 'admin'
+                };
+
+                const response = await fetch(`${API_BASE_URL}/reports`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(request)
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess('Отчет успешно создан!');
+                    loadReports();
+                } else {
+                    showError('Ошибка создания отчета: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                console.error('Ошибка генерации отчета:', error);
+                showError('Не удалось создать отчет');
+            }
+        }
+
+        // Просмотр отчета
+        function viewReport(reportId) {
+            window.open(`/reports/${reportId}`, '_blank');
+        }
+
+        // Экспорт отчета
+        async function exportReport(reportId, format) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reports/${reportId}/export/${format}`);
+                
+                if (format === 'csv') {
+                    const csv = await response.text();
+                    downloadFile(csv, `report_${reportId}.csv`, 'text/csv');
+                } else {
+                    const json = await response.json();
+                    downloadFile(JSON.stringify(json, null, 2), `report_${reportId}.json`, 'application/json');
+                }
+                
+                showSuccess('Отчет экспортирован!');
+            } catch (error) {
+                console.error('Ошибка экспорта отчета:', error);
+                showError('Не удалось экспортировать отчет');
+            }
+        }
+
+        // Публикация отчета
+        async function publishReport(reportId) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/reports/${reportId}/publish`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess('Отчет успешно опубликован!');
+                    loadReports();
+                } else {
+                    showError('Ошибка публикации отчета: ' + (result.error || 'Неизвестная ошибка'));
+                }
+            } catch (error) {
+                console.error('Ошибка публикации отчета:', error);
+                showError('Не удалось опубликовать отчет');
+            }
+        }
+
+        // Фильтрация отчетов
+        function filterReports() {
+            const typeFilter = document.getElementById('reportTypeFilter').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+            
+            // TODO: Implement filtering logic
+            loadReports();
+        }
+
+        // Обновление дашборда
+        function refreshDashboard() {
+            loadDashboardData();
+        }
+
+        // Просмотр токеномики
+        function viewTokenomics() {
+            window.open('/tokenomics', '_blank');
+        }
+
+        // Анализ эффективности
+        function analyzeEfficiency() {
+            window.open('/efficiency', '_blank');
+        }
+
+        // Вспомогательные функции
+        function getReportTypeLabel(type) {
+            const labels = {
+                'daily': 'Ежедневный',
+                'weekly': 'Еженедельный',
+                'monthly': 'Ежемесячный',
+                'quarterly': 'Квартальный',
+                'annual': 'Годовой',
+                'custom': 'Пользовательский'
+            };
+            return labels[type] || type;
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'generating': 'Генерируется',
+                'completed': 'Завершен',
+                'failed': 'Ошибка',
+                'published': 'Опубликован'
+            };
+            return labels[status] || status;
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ru-RU', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob([content], { type: mimeType });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            document.body.insertBefore(successDiv, document.body.firstChild);
+            setTimeout(() => successDiv.remove(), 3000);
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.body.insertBefore(errorDiv, document.body.firstChild);
+            setTimeout(() => errorDiv.remove(), 5000);
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadDashboardData();
+        });
+    </script>
+</body>
+</html>
+

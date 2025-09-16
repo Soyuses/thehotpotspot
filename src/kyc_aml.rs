@@ -173,6 +173,7 @@ pub struct UserRoleAssignment {
 }
 
 /// Менеджер KYC/AML системы
+#[derive(Clone)]
 pub struct KYCAmlManager {
     users: HashMap<String, KYCUser>,
     roles: HashMap<UserRole, Role>,

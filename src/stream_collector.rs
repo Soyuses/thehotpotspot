@@ -634,8 +634,8 @@ mod tests {
         assert!(config.supported_platforms.contains(&"youtube".to_string()));
     }
 
-    #[test]
-    fn test_streaming_ut_calculation() {
+    #[tokio::test]
+    async fn test_streaming_ut_calculation() {
         let config = StreamCollectorConfig::default();
         let collector = StreamCollector::new(
             config,
