@@ -116,11 +116,13 @@ pub struct UtEvent {
 /// UT event types
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum UtEventType {
-    Streaming,
-    Comment,
-    Share,
-    Like,
-    View,
+    Streaming,      // 1 SPOT per streaming session (max 45 minutes)
+    Viewing,        // 1 SPOT per 2 hours of viewing
+    FifthVisit,     // 1 SPOT per 5th authorized purchase
+    Comment,        // 1 SPOT per comment with 50+ likes
+    Share,          // 1 SPOT per repost/share
+    Like,           // Legacy - not used in new tokenomics
+    View,           // Legacy - not used in new tokenomics
 }
 
 /// ST minting record
@@ -296,27 +298,38 @@ impl NewTokenomicsManager {
         platform: String,
         duration_minutes: Option<u32>,
         count: Option<u32>,
+        likes: Option<u32>,
     ) -> Result<u128, String> {
         let units = match event_type {
             UtEventType::Streaming => {
                 if let Some(minutes) = duration_minutes {
-                    self.config.calculate_ut_for_streaming(minutes)
+                    self.config.calculate_ut_for_streaming_session(minutes)
                 } else {
                     return Err("Duration required for streaming event".to_string());
                 }
             }
-            _ => {
-                if let Some(cnt) = count {
-                    let action_str = match event_type {
-                        UtEventType::Comment => "comment",
-                        UtEventType::Share => "share",
-                        UtEventType::Like => "like",
-                        _ => return Err("Invalid event type for count-based calculation".to_string()),
-                    };
-                    self.config.calculate_ut_for_action(action_str, cnt)
+            UtEventType::Viewing => {
+                if let Some(minutes) = duration_minutes {
+                    self.config.calculate_ut_for_viewing(minutes)
                 } else {
-                    return Err("Count required for action event".to_string());
+                    return Err("Duration required for viewing event".to_string());
                 }
+            }
+            UtEventType::FifthVisit => {
+                self.config.calculate_ut_for_fifth_visit()
+            }
+            UtEventType::Share => {
+                self.config.calculate_ut_for_repost()
+            }
+            UtEventType::Comment => {
+                if let Some(like_count) = likes {
+                    self.config.calculate_ut_for_popular_comment(like_count)
+                } else {
+                    return Err("Like count required for comment event".to_string());
+                }
+            }
+            _ => {
+                return Err("Invalid event type for new tokenomics".to_string());
             }
         };
 
@@ -738,6 +751,131 @@ pub struct ConversionStats {
     pub total_ut_awarded: u128,
     pub total_rounds: usize,
     pub reserved_st: u128,
+}
+
+/// Result of unclaimed checks distribution
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DistributionResult {
+    /// Total ST distributed
+    pub total_distributed: u128,
+    /// Number of participants
+    pub participants: usize,
+    /// Median UT balance used as threshold
+    pub median_ut: u128,
+    /// Distribution details per participant
+    pub distribution_details: Vec<DistributionDetail>,
+}
+
+/// Distribution detail for a single participant
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DistributionDetail {
+    /// Participant address
+    pub address: String,
+    /// Their UT balance
+    pub ut_balance: u128,
+    /// ST tokens received
+    pub st_received: u128,
+    /// Percentage of total distribution
+    pub percentage: u128,
+}
+
+impl NewTokenomicsManager {
+    /// Distribute unclaimed checks to top UT holders (50% of unclaimed checks)
+    pub fn distribute_unclaimed_checks(&mut self, unclaimed_checks_value: u128) -> Result<DistributionResult, String> {
+        if unclaimed_checks_value == 0 {
+            return Ok(DistributionResult {
+                total_distributed: 0,
+                participants: 0,
+                median_ut: 0,
+                distribution_details: Vec::new(),
+            });
+        }
+
+        // Calculate 50% of unclaimed checks
+        let distribution_pool = unclaimed_checks_value / 2;
+        
+        // Get all UT holders and calculate median
+        let mut ut_balances: Vec<u128> = self.ut_holders.values()
+            .map(|holder| holder.balance)
+            .collect();
+        
+        if ut_balances.is_empty() {
+            return Ok(DistributionResult {
+                total_distributed: 0,
+                participants: 0,
+                median_ut: 0,
+                distribution_details: Vec::new(),
+            });
+        }
+
+        ut_balances.sort();
+        let median_ut = ut_balances[ut_balances.len() / 2];
+
+        // Filter holders above median
+        let eligible_holders: Vec<(String, u128)> = self.ut_holders.iter()
+            .filter(|(_, holder)| holder.balance > median_ut)
+            .map(|(address, holder)| (address.clone(), holder.balance))
+            .collect();
+
+        if eligible_holders.is_empty() {
+            return Ok(DistributionResult {
+                total_distributed: 0,
+                participants: 0,
+                median_ut,
+                distribution_details: Vec::new(),
+            });
+        }
+
+        // Calculate total UT above median
+        let total_ut_above_median: u128 = eligible_holders.iter()
+            .map(|(_, balance)| *balance)
+            .sum();
+
+        // Distribute proportionally
+        let mut distribution_details = Vec::new();
+        let mut total_distributed = 0u128;
+
+        for (address, ut_balance) in eligible_holders {
+            let share = (ut_balance * distribution_pool) / total_ut_above_median;
+            
+            // Update ST balance for the holder
+            if let Some(holder) = self.st_holders.get_mut(&address) {
+                holder.balance += share;
+            } else {
+                // Create new ST holder if doesn't exist
+                self.st_holders.insert(address.clone(), SecurityToken {
+                    token_id: format!("ST_{}", Utc::now().timestamp()),
+                    owner_address: address.clone(),
+                    balance: share,
+                    kyc_status: KycStatus::Pending,
+                    transfer_restricted: true,
+                    dividend_eligible: false,
+                    last_dividend_snapshot: None,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                });
+            }
+
+            distribution_details.push(DistributionDetail {
+                address: address.clone(),
+                ut_balance,
+                st_received: share,
+                percentage: (share * 100) / distribution_pool,
+            });
+
+            total_distributed += share;
+        }
+
+        // Update reserved ST
+        self.reserved_st = self.reserved_st.saturating_sub(total_distributed);
+
+        Ok(DistributionResult {
+            total_distributed,
+            participants: distribution_details.len(),
+            median_ut,
+            distribution_details,
+        })
+    }
 }
 
 #[cfg(test)]

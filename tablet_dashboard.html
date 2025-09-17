@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍜 Платшет за столом - The Hot Pot Spot</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spot-info {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .spot-info h2 {
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .spot-info p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .spot-rules {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .spot-rules h3 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .spot-rules ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .spot-rules li {
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .spot-rules li::before {
+            content: "🎯";
+            font-size: 1.2em;
+        }
+
+        .menu-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .menu-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+
+        .menu-item {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateY(-3px);
+        }
+
+        .menu-item h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .menu-item .price {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #ff6b6b;
+            margin-bottom: 10px;
+        }
+
+        .menu-item .description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .order-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .order-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .streaming-info {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .streaming-info h2 {
+            color: white;
+            margin-bottom: 15px;
+        }
+
+        .streaming-info p {
+            font-size: 1.1em;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .streaming-warning {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .streaming-warning h3 {
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .streaming-warning p {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+
+        .timer {
+            font-size: 2em;
+            font-weight: bold;
+            color: #ff6b6b;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background: #28a745;
+            animation: pulse 2s infinite;
+        }
+
+        .status-warning {
+            background: #ffc107;
+        }
+
+        .status-inactive {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            padding: 20px;
+            opacity: 0.8;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍜 The Hot Pot Spot</h1>
+            <p>Добро пожаловать! Закажите еду и зарабатывайте SPOT токены</p>
+        </div>
+
+        <!-- Информация о SPOT токенах -->
+        <div class="spot-info">
+            <h2>🎯 Что такое SPOT токены?</h2>
+            <p>SPOT - это utility-токены (токены полезности), которые вы можете заработать за активность в нашей сети фудтраков.</p>
+            
+            <div class="spot-rules">
+                <h3>Как заработать SPOT токены:</h3>
+                <ul>
+                    <li><strong>1 SPOT за каждое 5-е посещение</strong> - за каждую 5-ю авторизованную покупку</li>
+                    <li><strong>1 SPOT за 2 часа просмотра</strong> - за просмотр наших стримов в течение 2 часов</li>
+                    <li><strong>1 SPOT за репост</strong> - за репост наших постов в социальных сетях</li>
+                    <li><strong>1 SPOT за популярный комментарий</strong> - за комментарий, набравший 50+ лайков</li>
+                    <li><strong>1 SPOT за сессию стриминга</strong> - за стриминг еды за столом (максимум 45 минут)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Информация о стриминге -->
+        <div class="streaming-info">
+            <h2>📹 Стриминг еды за столом</h2>
+            <p>Вы можете стримить процесс приготовления и поедания еды за вашим столом!</p>
+            
+            <div class="streaming-warning">
+                <h3>⚠️ Важно!</h3>
+                <p>Сессия стриминга ограничена <strong>45 минутами</strong>. После этого стрим автоматически остановится с сообщением "Не замедляйте fast food!"</p>
+            </div>
+            
+            <div class="timer" id="streamingTimer">00:00</div>
+            <button class="btn" id="startStreamingBtn" onclick="startStreaming()">🎬 Начать стриминг</button>
+        </div>
+
+        <div class="main-content">
+            <!-- Меню -->
+            <div class="menu-section">
+                <h2>🍽️ Наше меню</h2>
+                <div class="menu-grid" id="menuGrid">
+                    <!-- Меню будет загружено динамически -->
+                </div>
+            </div>
+
+            <!-- Заказ -->
+            <div class="order-section">
+                <h2>🛒 Сделать заказ</h2>
+                <form id="orderForm">
+                    <div class="form-group">
+                        <label for="customerName">Ваше имя:</label>
+                        <input type="text" id="customerName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phoneNumber">Номер телефона:</label>
+                        <input type="tel" id="phoneNumber" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="selectedItems">Выбранные блюда:</label>
+                        <select id="selectedItems" multiple required>
+                            <!-- Опции будут добавлены динамически -->
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="specialRequests">Особые пожелания:</label>
+                        <textarea id="specialRequests" rows="3" placeholder="Без лука, острое, и т.д."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="btn">📝 Оформить заказ</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Статистика пользователя -->
+        <div class="card">
+            <h2>📊 Ваша статистика</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                <div>
+                    <h3>SPOT токены</h3>
+                    <p style="font-size: 1.5em; color: #ff6b6b; font-weight: bold;" id="userSpotBalance">0</p>
+                </div>
+                <div>
+                    <h3>Посещений</h3>
+                    <p style="font-size: 1.5em; color: #667eea; font-weight: bold;" id="userVisits">0</p>
+                </div>
+                <div>
+                    <h3>Заказов</h3>
+                    <p style="font-size: 1.5em; color: #28a745; font-weight: bold;" id="userOrders">0</p>
+                </div>
+                <div>
+                    <h3>Стримингов</h3>
+                    <p style="font-size: 1.5em; color: #4facfe; font-weight: bold;" id="userStreams">0</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>© 2024 The Hot Pot Spot. Зарабатывайте SPOT токены за активность!</p>
+        </div>
+    </div>
+
+    <script>
+        let streamingTimer = null;
+        let streamingTime = 0;
+        let isStreaming = false;
+
+        // Загрузка меню
+        function loadMenu() {
+            const menuItems = [
+                {
+                    id: 1,
+                    name: "Хот-пот с говядиной",
+                    price: "25.00 GEL",
+                    description: "Классический хот-пот с нежной говядиной, овощами и специями"
+                },
+                {
+                    id: 2,
+                    name: "Хот-пот с курицей",
+                    price: "22.00 GEL",
+                    description: "Ароматный хот-пот с куриным мясом и свежими овощами"
+                },
+                {
+                    id: 3,
+                    name: "Хот-пот с морепродуктами",
+                    price: "35.00 GEL",
+                    description: "Морской хот-пот с креветками, кальмарами и рыбой"
+                },
+                {
+                    id: 4,
+                    name: "Вегетарианский хот-пот",
+                    price: "20.00 GEL",
+                    description: "Полезный хот-пот с грибами, тофу и сезонными овощами"
+                },
+                {
+                    id: 5,
+                    name: "Хот-пот с бараниной",
+                    price: "28.00 GEL",
+                    description: "Насыщенный хот-пот с нежной бараниной и восточными специями"
+                },
+                {
+                    id: 6,
+                    name: "Детский хот-пот",
+                    price: "15.00 GEL",
+                    description: "Мягкий хот-пот с курицей, подходящий для детей"
+                }
+            ];
+
+            const menuGrid = document.getElementById('menuGrid');
+            const selectedItems = document.getElementById('selectedItems');
+
+            menuGrid.innerHTML = '';
+            selectedItems.innerHTML = '';
+
+            menuItems.forEach(item => {
+                // Добавляем в сетку меню
+                const menuItem = document.createElement('div');
+                menuItem.className = 'menu-item';
+                menuItem.innerHTML = `
+                    <h3>${item.name}</h3>
+                    <div class="price">${item.price}</div>
+                    <div class="description">${item.description}</div>
+                `;
+                menuGrid.appendChild(menuItem);
+
+                // Добавляем в селект для заказа
+                const option = document.createElement('option');
+                option.value = item.id;
+                option.textContent = `${item.name} - ${item.price}`;
+                selectedItems.appendChild(option);
+            });
+        }
+
+        // Начало стриминга
+        function startStreaming() {
+            if (isStreaming) {
+                stopStreaming();
+                return;
+            }
+
+            isStreaming = true;
+            streamingTime = 0;
+            document.getElementById('startStreamingBtn').textContent = '⏹️ Остановить стриминг';
+            document.getElementById('startStreamingBtn').style.background = 'linear-gradient(135deg, #dc3545, #c82333)';
+
+            streamingTimer = setInterval(() => {
+                streamingTime++;
+                updateStreamingTimer();
+
+                // Проверяем лимит в 45 минут (2700 секунд)
+                if (streamingTime >= 2700) {
+                    stopStreaming();
+                    alert('Время стриминга истекло! Не замедляйте fast food!');
+                }
+            }, 1000);
+        }
+
+        // Остановка стриминга
+        function stopStreaming() {
+            if (!isStreaming) return;
+
+            isStreaming = false;
+            clearInterval(streamingTimer);
+            document.getElementById('startStreamingBtn').textContent = '🎬 Начать стриминг';
+            document.getElementById('startStreamingBtn').style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+
+            // Если стриминг длился больше 0 секунд, начисляем SPOT
+            if (streamingTime > 0) {
+                const minutes = Math.floor(streamingTime / 60);
+                const seconds = streamingTime % 60;
+                alert(`Стриминг завершен! Длительность: ${minutes}:${seconds.toString().padStart(2, '0')}\nНачислен 1 SPOT токен!`);
+                
+                // Обновляем статистику
+                updateUserStats();
+            }
+
+            streamingTime = 0;
+            updateStreamingTimer();
+        }
+
+        // Обновление таймера стриминга
+        function updateStreamingTimer() {
+            const minutes = Math.floor(streamingTime / 60);
+            const seconds = streamingTime % 60;
+            document.getElementById('streamingTimer').textContent = 
+                `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        // Обновление статистики пользователя
+        function updateUserStats() {
+            // В реальном приложении это будет загружаться с сервера
+            const currentSpot = parseInt(document.getElementById('userSpotBalance').textContent);
+            const currentVisits = parseInt(document.getElementById('userVisits').textContent);
+            const currentOrders = parseInt(document.getElementById('userOrders').textContent);
+            const currentStreams = parseInt(document.getElementById('userStreams').textContent);
+
+            document.getElementById('userSpotBalance').textContent = currentSpot + 1;
+            document.getElementById('userStreams').textContent = currentStreams + 1;
+        }
+
+        // Обработка формы заказа
+        document.getElementById('orderForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const customerName = document.getElementById('customerName').value;
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            const selectedItems = Array.from(document.getElementById('selectedItems').selectedOptions);
+            const specialRequests = document.getElementById('specialRequests').value;
+
+            if (selectedItems.length === 0) {
+                alert('Пожалуйста, выберите хотя бы одно блюдо');
+                return;
+            }
+
+            // Отправка заказа на сервер
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    method: 'create_order',
+                    params: {
+                        customer_name: customerName,
+                        phone_number: phoneNumber,
+                        items: selectedItems.map(item => ({
+                            id: item.value,
+                            name: item.textContent
+                        })),
+                        special_requests: specialRequests
+                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Заказ успешно оформлен! Ожидайте приготовления.');
+                    
+                    // Обновляем статистику
+                    const currentOrders = parseInt(document.getElementById('userOrders').textContent);
+                    const currentVisits = parseInt(document.getElementById('userVisits').textContent);
+                    document.getElementById('userOrders').textContent = currentOrders + 1;
+                    document.getElementById('userVisits').textContent = currentVisits + 1;
+
+                    // Проверяем, является ли это 5-м посещением
+                    if ((currentVisits + 1) % 5 === 0) {
+                        const currentSpot = parseInt(document.getElementById('userSpotBalance').textContent);
+                        document.getElementById('userSpotBalance').textContent = currentSpot + 1;
+                        alert('Поздравляем! Это ваше 5-е посещение! Начислен 1 SPOT токен!');
+                    }
+
+                    // Очищаем форму
+                    this.reset();
+                } else {
+                    alert('Ошибка при оформлении заказа: ' + (data.error || 'Неизвестная ошибка'));
+                }
+            })
+            .catch(error => {
+                alert('Ошибка при оформлении заказа: ' + error.message);
+            });
+        });
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            loadMenu();
+            updateStreamingTimer();
+        });
+    </script>
+</body>
+</html>

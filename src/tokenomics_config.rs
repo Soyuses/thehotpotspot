@@ -27,20 +27,24 @@ pub struct SecurityTokenConfig {
 /// Utility Token (UT) configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UtilityTokenConfig {
-    /// UT tokens per minute of streaming
-    pub ut_per_minute: u128,
-    /// UT tokens per comment
-    pub ut_per_comment: u128,
-    /// UT tokens per share/repost
-    pub ut_per_share: u128,
-    /// UT tokens per like
-    pub ut_per_like: u128,
+    /// UT tokens per 5th visit (1 SPOT per 5th authorized purchase)
+    pub ut_per_fifth_visit: u128,
+    /// UT tokens per streaming session (1 SPOT per session, max 45 minutes)
+    pub ut_per_streaming_session: u128,
+    /// UT tokens per 2 hours of viewing
+    pub ut_per_2_hours_viewing: u128,
+    /// UT tokens per repost/share
+    pub ut_per_repost: u128,
+    /// UT tokens per comment with 50+ likes
+    pub ut_per_popular_comment: u128,
+    /// Maximum streaming session duration (45 minutes)
+    pub max_streaming_session_minutes: u32,
     /// Maximum UT per day per user
     pub max_ut_per_day: u128,
-    /// Minimum streaming time for UT accrual (in minutes)
-    pub min_streaming_time_minutes: u32,
     /// UT are non-transferable (Soulbound)
     pub non_transferable: bool,
+    /// Minimum likes required for popular comment
+    pub min_likes_for_popular_comment: u32,
 }
 
 /// Conversion pool configuration
@@ -174,13 +178,15 @@ impl Default for TokenomicsConfig {
                 pause_enabled: true,
             },
             utility_token: UtilityTokenConfig {
-                ut_per_minute: 10, // 10 UT per minute of streaming
-                ut_per_comment: 5, // 5 UT per comment
-                ut_per_share: 20, // 20 UT per share/repost
-                ut_per_like: 1, // 1 UT per like
-                max_ut_per_day: 1000, // 1000 UT max per day
-                min_streaming_time_minutes: 5, // Minimum 5 minutes for UT accrual
+                ut_per_fifth_visit: 1 * TOKEN_SCALE, // 1 SPOT per 5th visit
+                ut_per_streaming_session: 1 * TOKEN_SCALE, // 1 SPOT per streaming session
+                ut_per_2_hours_viewing: 1 * TOKEN_SCALE, // 1 SPOT per 2 hours viewing
+                ut_per_repost: 1 * TOKEN_SCALE, // 1 SPOT per repost
+                ut_per_popular_comment: 1 * TOKEN_SCALE, // 1 SPOT per popular comment
+                max_streaming_session_minutes: 45, // 45 minutes max per session
+                max_ut_per_day: 10 * TOKEN_SCALE, // 10 SPOT max per day
                 non_transferable: true, // UT are soulbound/non-transferable
+                min_likes_for_popular_comment: 50, // 50 likes required for popular comment
             },
             conversion_pool: ConversionPoolConfig {
                 conversion_pool_share: 50, // 50% of reserved ST
@@ -239,12 +245,12 @@ impl TokenomicsConfig {
     /// Create a new tokenomics configuration with custom settings
     pub fn new(
         thp_per_gel: u128,
-        ut_per_minute: u128,
+        ut_per_streaming_session: u128,
         conversion_pool_share: u8,
     ) -> Self {
         let mut config = Self::default();
         config.security_token.thp_per_gel = thp_per_gel;
-        config.utility_token.ut_per_minute = ut_per_minute;
+        config.utility_token.ut_per_streaming_session = ut_per_streaming_session;
         config.conversion_pool.conversion_pool_share = conversion_pool_share;
         config
     }
@@ -255,20 +261,49 @@ impl TokenomicsConfig {
         (gel_subunits * self.security_token.thp_per_gel) / TOKEN_SCALE
     }
 
-    /// Calculate UT tokens for streaming time
-    pub fn calculate_ut_for_streaming(&self, minutes: u32) -> u128 {
-        if minutes < self.utility_token.min_streaming_time_minutes {
-            return 0;
+    /// Calculate UT tokens for streaming session (1 SPOT per session, max 45 minutes)
+    pub fn calculate_ut_for_streaming_session(&self, minutes: u32) -> u128 {
+        if minutes > self.utility_token.max_streaming_session_minutes {
+            return 0; // Session too long, no UT awarded
         }
-        (minutes as u128) * self.utility_token.ut_per_minute
+        self.utility_token.ut_per_streaming_session
     }
 
-    /// Calculate UT tokens for social actions
+    /// Calculate UT tokens for viewing time (1 SPOT per 2 hours)
+    pub fn calculate_ut_for_viewing(&self, minutes: u32) -> u128 {
+        let hours = minutes / 60;
+        if hours >= 2 {
+            self.utility_token.ut_per_2_hours_viewing
+        } else {
+            0
+        }
+    }
+
+    /// Calculate UT tokens for 5th visit
+    pub fn calculate_ut_for_fifth_visit(&self) -> u128 {
+        self.utility_token.ut_per_fifth_visit
+    }
+
+    /// Calculate UT tokens for repost
+    pub fn calculate_ut_for_repost(&self) -> u128 {
+        self.utility_token.ut_per_repost
+    }
+
+    /// Calculate UT tokens for popular comment (50+ likes)
+    pub fn calculate_ut_for_popular_comment(&self, likes: u32) -> u128 {
+        if likes >= self.utility_token.min_likes_for_popular_comment {
+            self.utility_token.ut_per_popular_comment
+        } else {
+            0
+        }
+    }
+
+    /// Calculate UT tokens for social actions (legacy function for compatibility)
     pub fn calculate_ut_for_action(&self, action: &str, count: u32) -> u128 {
         let ut_per_action = match action {
-            "comment" => self.utility_token.ut_per_comment,
-            "share" => self.utility_token.ut_per_share,
-            "like" => self.utility_token.ut_per_like,
+            "comment" => self.utility_token.ut_per_popular_comment,
+            "share" => self.utility_token.ut_per_repost,
+            "like" => 0, // Legacy - not used in new tokenomics
             _ => 0,
         };
         (count as u128) * ut_per_action
@@ -299,8 +334,8 @@ impl TokenomicsConfig {
         if self.security_token.thp_per_gel == 0 {
             return Err("ST per GEL cannot be zero".to_string());
         }
-        if self.utility_token.ut_per_minute == 0 {
-            return Err("UT per minute cannot be zero".to_string());
+        if self.utility_token.ut_per_streaming_session == 0 {
+            return Err("UT per streaming session cannot be zero".to_string());
         }
         if self.conversion_pool.conversion_pool_share > 100 {
             return Err("Conversion pool share cannot exceed 100%".to_string());

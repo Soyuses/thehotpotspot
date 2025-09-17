@@ -539,6 +539,8 @@ impl StreamCollector {
             user_id.parse::<i32>().map_err(|_| "Invalid user ID")?,
             match event_type {
                 UtEventType::Streaming => "streaming",
+                UtEventType::Viewing => "viewing",
+                UtEventType::FifthVisit => "fifth_visit",
                 UtEventType::Comment => "comment",
                 UtEventType::Share => "share",
                 UtEventType::Like => "like",

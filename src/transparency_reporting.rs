@@ -197,7 +197,7 @@ impl TransparencyReportingSystem {
     pub async fn generate_report(
         &mut self,
         request: ReportGenerationRequest,
-        _cost_data: &crate::cost_tracking::CostTracker,
+        cost_data: &crate::cost_tracking::CostTracker,
         tokenomics_data: &crate::new_tokenomics::NewTokenomicsManager,
         sales_data: &HashMap<String, f64>,
     ) -> ReportGenerationResponse {
@@ -263,7 +263,7 @@ impl TransparencyReportingSystem {
     async fn collect_report_data(
         &self,
         report: &mut TransparencyReport,
-        _cost_data: &crate::cost_tracking::CostTracker,
+        cost_data: &crate::cost_tracking::CostTracker,
         tokenomics_data: &crate::new_tokenomics::NewTokenomicsManager,
         sales_data: &HashMap<String, f64>,
     ) -> Result<(), Box<dyn std::error::Error>> {

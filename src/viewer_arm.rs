@@ -288,38 +288,42 @@ impl ViewerARM {
             UtEventType::Streaming => {
                 if let Some(duration) = request.duration_minutes {
                     session.total_streaming_time += duration;
-                    duration as u128 * 10 // 10 UT per minute
+                    if duration <= 45 {
+                        1 * 100 // 1 SPOT per session (max 45 minutes)
+                    } else {
+                        0 // No UT for sessions longer than 45 minutes
+                    }
                 } else {
                     0
                 }
             }
-            UtEventType::Comment => {
-                if let Some(count) = request.count {
-                    count as u128 * 5 // 5 UT per comment
+            UtEventType::Viewing => {
+                if let Some(duration) = request.duration_minutes {
+                    if duration >= 120 { // 2 hours
+                        1 * 100 // 1 SPOT per 2 hours viewing
+                    } else {
+                        0
+                    }
                 } else {
-                    5 // Default 1 comment
+                    0
                 }
+            }
+            UtEventType::FifthVisit => {
+                1 * 100 // 1 SPOT per 5th visit
+            }
+            UtEventType::Comment => {
+                // For now, assume all comments are popular (50+ likes)
+                // In real implementation, this would come from the streaming platform
+                1 * 100 // 1 SPOT per popular comment (50+ likes)
             }
             UtEventType::Share => {
-                if let Some(count) = request.count {
-                    count as u128 * 20 // 20 UT per share
-                } else {
-                    20 // Default 1 share
-                }
+                1 * 100 // 1 SPOT per repost/share
             }
             UtEventType::Like => {
-                if let Some(count) = request.count {
-                    count as u128 * 2 // 2 UT per like
-                } else {
-                    2 // Default 1 like
-                }
+                0 // Legacy - not used in new tokenomics
             }
             UtEventType::View => {
-                if let Some(count) = request.count {
-                    count as u128 * 1 // 1 UT per view
-                } else {
-                    1 // Default 1 view
-                }
+                0 // Legacy - not used in new tokenomics
             }
         };
 
