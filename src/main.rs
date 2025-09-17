@@ -2278,6 +2278,12 @@ enum ApiRequest {
     GetUnclaimedTokens { limit: Option<u32> },
     GetAnnualDistributions { limit: Option<u32> },
     CheckExpiredUnclaimedTokens,
+    // UT to ST Conversion API endpoints
+    GetUTHolders,
+    ConvertUTToST {
+        holders: Vec<String>,
+        exchange_rate: u32,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2532,6 +2538,14 @@ enum ApiResponse {
         reason: Option<String> 
     },
     Error { message: String },
+    // UT to ST Conversion responses
+    UTHolders { holders: Vec<UTHolder> },
+    ConversionResult { 
+        success: bool, 
+        converted_holders: Vec<ConversionDetail>,
+        total_ut_converted: u128,
+        total_st_issued: u128,
+    },
 }
 
 // Структуры для истории
@@ -2695,6 +2709,22 @@ struct ContractExecution {
     timestamp: u64,
     result: String,
     tokens_used: f64,
+}
+
+// Структуры для конвертации UT в ST
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct UTHolder {
+    address: String,
+    balance: u128,
+    name: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct ConversionDetail {
+    holder_address: String,
+    ut_converted: u128,
+    st_issued: u128,
+    conversion_rate: u32,
 }
 
 #[cfg_attr(test, allow(dead_code))]
@@ -4256,6 +4286,105 @@ impl ApiServer {
                     },
                     (Err(e), _) => ApiResponse::Error { message: format!("Invalid version1: {}", e) },
                     (_, Err(e)) => ApiResponse::Error { message: format!("Invalid version2: {}", e) },
+                }
+            }
+            
+            // UT to ST Conversion API endpoints
+            ApiRequest::GetUTHolders => {
+                // Демо-данные для держателей UT
+                let holders = vec![
+                    UTHolder {
+                        address: "0x1234...5678".to_string(),
+                        balance: 150,
+                        name: Some("Активный пользователь 1".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x2345...6789".to_string(),
+                        balance: 120,
+                        name: Some("Активный пользователь 2".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x3456...7890".to_string(),
+                        balance: 95,
+                        name: Some("Стример еды".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x4567...8901".to_string(),
+                        balance: 80,
+                        name: Some("Постоянный клиент".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x5678...9012".to_string(),
+                        balance: 65,
+                        name: Some("Участник DAO".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x6789...0123".to_string(),
+                        balance: 45,
+                        name: Some("Лояльный клиент".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x7890...1234".to_string(),
+                        balance: 30,
+                        name: Some("Новый пользователь".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x8901...2345".to_string(),
+                        balance: 20,
+                        name: Some("Тестовый аккаунт".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x9012...3456".to_string(),
+                        balance: 15,
+                        name: Some("Демо пользователь".to_string()),
+                    },
+                    UTHolder {
+                        address: "0x0123...4567".to_string(),
+                        balance: 10,
+                        name: Some("Гость".to_string()),
+                    },
+                ];
+                ApiResponse::UTHolders { holders }
+            }
+            
+            ApiRequest::ConvertUTToST { holders, exchange_rate } => {
+                if holders.is_empty() {
+                    return ApiResponse::Error { message: "No holders specified for conversion".to_string() };
+                }
+                
+                if exchange_rate == 0 {
+                    return ApiResponse::Error { message: "Exchange rate cannot be zero".to_string() };
+                }
+                
+                // Демо-данные для конвертации
+                let mut converted_holders = Vec::new();
+                let mut total_ut_converted = 0u128;
+                let mut total_st_issued = 0u128;
+                
+                for holder_address in holders {
+                    // В реальной реализации здесь был бы запрос к базе данных
+                    // для получения баланса UT держателя
+                    let ut_balance = 100u128; // Демо-значение
+                    let st_to_issue = ut_balance / exchange_rate as u128;
+                    
+                    if st_to_issue > 0 {
+                        converted_holders.push(ConversionDetail {
+                            holder_address: holder_address.clone(),
+                            ut_converted: ut_balance,
+                            st_issued: st_to_issue,
+                            conversion_rate: exchange_rate,
+                        });
+                        
+                        total_ut_converted += ut_balance;
+                        total_st_issued += st_to_issue;
+                    }
+                }
+                
+                ApiResponse::ConversionResult {
+                    success: true,
+                    converted_holders,
+                    total_ut_converted,
+                    total_st_issued,
                 }
             }
         }

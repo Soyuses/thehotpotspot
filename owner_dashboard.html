@@ -462,6 +462,109 @@
             padding-left: 20px;
         }
 
+        /* Стили для секции конвертации */
+        .conversion-section {
+            display: grid;
+            gap: 20px;
+        }
+
+        .ut-holders-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background: #f8f9fa;
+        }
+
+        .ut-holder-item {
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .ut-holder-item:last-child {
+            border-bottom: none;
+        }
+
+        .ut-holder-item input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .ut-holder-item label {
+            flex: 1;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .ut-balance {
+            font-weight: bold;
+            color: #28a745;
+        }
+
+        .exchange-rate {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .exchange-rate input {
+            width: 100px;
+        }
+
+        .conversion-summary {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .conversion-summary h4 {
+            margin: 0 0 10px 0;
+            color: #1976d2;
+        }
+
+        .conversion-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #bbdefb;
+        }
+
+        .conversion-item:last-child {
+            border-bottom: none;
+            font-weight: bold;
+            color: #1976d2;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+            border: none;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
         .rule-section li {
             margin: 8px 0;
             line-height: 1.5;
@@ -675,6 +778,49 @@
                     </div>
                     <button type="submit" class="btn">Сохранить настройки</button>
                 </form>
+            </div>
+            
+            <div class="card">
+                <h3>🔄 Конвертация UT (SPOT) в ST (THP)</h3>
+                <div class="conversion-section">
+                    <div class="form-group">
+                        <label>Выберите держателей UT (SPOT):</label>
+                        <div class="ut-holders-list">
+                            <div class="ut-holder-item">
+                                <input type="checkbox" id="selectAll" onchange="toggleAllHolders()">
+                                <label for="selectAll"><strong>Выбрать всех</strong></label>
+                            </div>
+                            <div id="utHoldersList">
+                                <p>Загрузка списка держателей UT...</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Курс обмена (SPOT → ST):</label>
+                        <div class="exchange-rate">
+                            <input type="number" id="exchangeRate" value="10" min="1" max="1000" step="1">
+                            <span>SPOT = 1 ST</span>
+                        </div>
+                        <small>Укажите, сколько SPOT токенов нужно для получения 1 ST токена</small>
+                    </div>
+                    
+                    <div class="conversion-summary">
+                        <h4>Сводка конвертации:</h4>
+                        <div id="conversionSummary">
+                            <p>Выберите держателей UT для просмотра сводки</p>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="button" class="btn btn-primary" onclick="executeConversion()" id="convertBtn" disabled>
+                            🔄 Выполнить конвертацию
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="clearSelection()">
+                            🗑️ Очистить выбор
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1502,6 +1648,8 @@
                 loadMonitoringData();
             } else if (tabName === 'franchises') {
                 loadFranchises();
+            } else if (tabName === 'token-emission') {
+                loadUTHolders();
             } else if (tabName === 'cost-accounting') {
                 loadCostAccountingData();
             } else if (tabName === 'streams') {
@@ -1860,6 +2008,213 @@
                 showAlert('Ошибка при сохранении настроек: ' + error.message, 'error');
             });
         });
+
+        // Функции для конвертации UT в ST
+        let utHolders = [];
+        let selectedHolders = new Set();
+
+        function loadUTHolders() {
+            // Загрузка списка держателей UT с сервера
+            fetch('http://localhost:3000', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    GetUTHolders: {}
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.UTHolders) {
+                    utHolders = data.UTHolders.sort((a, b) => b.balance - a.balance);
+                    displayUTHolders();
+                }
+            })
+            .catch(error => {
+                console.log('API недоступен, используются демо-данные');
+                loadDemoUTHolders();
+            });
+        }
+
+        function loadDemoUTHolders() {
+            // Демо-данные для держателей UT
+            utHolders = [
+                { address: '0x1234...5678', balance: 150, name: 'Активный пользователь 1' },
+                { address: '0x2345...6789', balance: 120, name: 'Активный пользователь 2' },
+                { address: '0x3456...7890', balance: 95, name: 'Стример еды' },
+                { address: '0x4567...8901', balance: 80, name: 'Постоянный клиент' },
+                { address: '0x5678...9012', balance: 65, name: 'Участник DAO' },
+                { address: '0x6789...0123', balance: 45, name: 'Лояльный клиент' },
+                { address: '0x7890...1234', balance: 30, name: 'Новый пользователь' },
+                { address: '0x8901...2345', balance: 20, name: 'Тестовый аккаунт' },
+                { address: '0x9012...3456', balance: 15, name: 'Демо пользователь' },
+                { address: '0x0123...4567', balance: 10, name: 'Гость' }
+            ];
+            displayUTHolders();
+        }
+
+        function displayUTHolders() {
+            const container = document.getElementById('utHoldersList');
+            container.innerHTML = '';
+
+            utHolders.forEach((holder, index) => {
+                const holderItem = document.createElement('div');
+                holderItem.className = 'ut-holder-item';
+                holderItem.innerHTML = `
+                    <input type="checkbox" id="holder_${index}" value="${holder.address}" onchange="toggleHolder('${holder.address}')">
+                    <label for="holder_${index}">
+                        <span>${holder.name || holder.address}</span>
+                        <span class="ut-balance">${holder.balance} SPOT</span>
+                    </label>
+                `;
+                container.appendChild(holderItem);
+            });
+        }
+
+        function toggleHolder(address) {
+            const checkbox = document.querySelector(`input[value="${address}"]`);
+            if (checkbox.checked) {
+                selectedHolders.add(address);
+            } else {
+                selectedHolders.delete(address);
+            }
+            updateConversionSummary();
+            updateConvertButton();
+        }
+
+        function toggleAllHolders() {
+            const selectAllCheckbox = document.getElementById('selectAll');
+            const holderCheckboxes = document.querySelectorAll('#utHoldersList input[type="checkbox"]');
+            
+            holderCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+                if (selectAllCheckbox.checked) {
+                    selectedHolders.add(checkbox.value);
+                } else {
+                    selectedHolders.delete(checkbox.value);
+                }
+            });
+            
+            updateConversionSummary();
+            updateConvertButton();
+        }
+
+        function updateConversionSummary() {
+            const summaryContainer = document.getElementById('conversionSummary');
+            const exchangeRate = parseInt(document.getElementById('exchangeRate').value) || 10;
+            
+            if (selectedHolders.size === 0) {
+                summaryContainer.innerHTML = '<p>Выберите держателей UT для просмотра сводки</p>';
+                return;
+            }
+
+            let totalSPOT = 0;
+            let totalST = 0;
+            let conversionDetails = [];
+
+            selectedHolders.forEach(address => {
+                const holder = utHolders.find(h => h.address === address);
+                if (holder) {
+                    const stToReceive = Math.floor(holder.balance / exchangeRate);
+                    totalSPOT += holder.balance;
+                    totalST += stToReceive;
+                    conversionDetails.push({
+                        name: holder.name || holder.address,
+                        spot: holder.balance,
+                        st: stToReceive
+                    });
+                }
+            });
+
+            let summaryHTML = `
+                <div class="conversion-item">
+                    <span>Всего выбрано держателей:</span>
+                    <span>${selectedHolders.size}</span>
+                </div>
+            `;
+
+            conversionDetails.forEach(detail => {
+                summaryHTML += `
+                    <div class="conversion-item">
+                        <span>${detail.name}:</span>
+                        <span>${detail.spot} SPOT → ${detail.st} ST</span>
+                    </div>
+                `;
+            });
+
+            summaryHTML += `
+                <div class="conversion-item">
+                    <span>Общая сумма:</span>
+                    <span>${totalSPOT} SPOT → ${totalST} ST</span>
+                </div>
+            `;
+
+            summaryContainer.innerHTML = summaryHTML;
+        }
+
+        function updateConvertButton() {
+            const convertBtn = document.getElementById('convertBtn');
+            convertBtn.disabled = selectedHolders.size === 0;
+        }
+
+        function executeConversion() {
+            if (selectedHolders.size === 0) {
+                showAlert('Выберите хотя бы одного держателя UT', 'error');
+                return;
+            }
+
+            const exchangeRate = parseInt(document.getElementById('exchangeRate').value) || 10;
+            const confirmMessage = `Вы уверены, что хотите конвертировать UT в ST по курсу ${exchangeRate} SPOT = 1 ST для ${selectedHolders.size} держателей?`;
+
+            if (confirm(confirmMessage)) {
+                // Отправка запроса на конвертацию
+                const conversionData = {
+                    ConvertUTToST: {
+                        holders: Array.from(selectedHolders),
+                        exchange_rate: exchangeRate
+                    }
+                };
+
+                fetch('http://localhost:3000', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(conversionData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.ConversionResult) {
+                        showAlert('Конвертация выполнена успешно!', 'success');
+                        clearSelection();
+                        loadUTHolders(); // Обновить список
+                    } else {
+                        showAlert('Ошибка при выполнении конвертации', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.log('API недоступен, симуляция конвертации');
+                    showAlert('Конвертация выполнена успешно! (демо-режим)', 'success');
+                    clearSelection();
+                    loadDemoUTHolders(); // Обновить список
+                });
+            }
+        }
+
+        function clearSelection() {
+            selectedHolders.clear();
+            document.getElementById('selectAll').checked = false;
+            const holderCheckboxes = document.querySelectorAll('#utHoldersList input[type="checkbox"]');
+            holderCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateConversionSummary();
+            updateConvertButton();
+        }
+
+        // Обновление сводки при изменении курса обмена
+        document.getElementById('exchangeRate').addEventListener('input', updateConversionSummary);
 
         document.addEventListener('DOMContentLoaded', function() {
             loadMonitoringData();
