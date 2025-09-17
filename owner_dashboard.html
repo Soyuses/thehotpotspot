@@ -547,19 +547,19 @@
                 </div>
 
                 <div class="card">
-                    <h3>Соотношение токенов</h3>
+                    <h3>Токеномика системы</h3>
                     <div id="tokenRatio">
                         <div class="token-ratio-display">
                             <div class="ratio-item">
-                                <h4>Security Tokens</h4>
-                                <div class="ratio-value" id="securityTokensCount">1,000,000</div>
-                                <div class="ratio-percentage">50%</div>
+                                <h4>Security Tokens (ST)</h4>
+                                <div class="ratio-value" id="securityTokensCount">0</div>
+                                <div class="ratio-percentage">Генерируются за продажи</div>
                             </div>
-                            <div class="ratio-separator">:</div>
+                            <div class="ratio-separator">≠</div>
                             <div class="ratio-item">
-                                <h4>Utility Tokens</h4>
-                                <div class="ratio-value" id="utilityTokensCount">1,000,000</div>
-                                <div class="ratio-percentage">50%</div>
+                                <h4>Utility Tokens (SPOT)</h4>
+                                <div class="ratio-value" id="utilityTokensCount">0</div>
+                                <div class="ratio-percentage">Генерируются за активность</div>
                             </div>
                         </div>
                         <div class="ratio-info">
@@ -850,8 +850,8 @@
                 <h3>Активные стримы</h3>
                 <div id="activeStreams">
                     <p>Загрузка активных стримов...</p>
-                </div>
-            </div>
+        </div>
+    </div>
 
             <div class="card">
                 <h3>Создать новый стрим</h3>
@@ -1003,6 +1003,40 @@
             document.getElementById('franchiseNodes').textContent = '6';
             document.getElementById('charityFund').textContent = '150.00';
             document.getElementById('unclaimedTokens').textContent = '245.00';
+            
+            // Обновляем отображение токенов согласно новой токеномике
+            document.getElementById('securityTokensCount').textContent = '0';
+            document.getElementById('utilityTokensCount').textContent = '0';
+        }
+
+        function updateOwnerStats(stats) {
+            // Обновляем основные статистики
+            if (stats.owner_tokens !== undefined) {
+                document.getElementById('ownerTokens').textContent = stats.owner_tokens.toFixed(2);
+            }
+            if (stats.owner_percentage !== undefined) {
+                document.getElementById('ownerPercentage').textContent = stats.owner_percentage.toFixed(2) + '%';
+            }
+            if (stats.active_alerts !== undefined) {
+                document.getElementById('activeAlerts').textContent = stats.active_alerts;
+            }
+            if (stats.franchise_nodes !== undefined) {
+                document.getElementById('franchiseNodes').textContent = stats.franchise_nodes;
+            }
+            if (stats.charity_fund !== undefined) {
+                document.getElementById('charityFund').textContent = stats.charity_fund.toFixed(2);
+            }
+            if (stats.unclaimed_tokens !== undefined) {
+                document.getElementById('unclaimedTokens').textContent = stats.unclaimed_tokens.toFixed(2);
+            }
+            
+            // Обновляем токены согласно новой токеномике
+            if (stats.security_tokens !== undefined) {
+                document.getElementById('securityTokensCount').textContent = stats.security_tokens.toLocaleString();
+            }
+            if (stats.utility_tokens !== undefined) {
+                document.getElementById('utilityTokensCount').textContent = stats.utility_tokens.toLocaleString();
+            }
         }
 
         function loadAlerts() {
