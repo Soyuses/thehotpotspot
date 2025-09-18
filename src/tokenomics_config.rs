@@ -399,7 +399,7 @@ mod tests {
     fn test_default_config() {
         let config = TokenomicsConfig::default();
         assert_eq!(config.security_token.thp_per_gel, 20);
-        assert_eq!(config.utility_token.ut_per_minute, 10);
+        assert_eq!(config.utility_token.ut_per_streaming_session, 100);
         assert_eq!(config.conversion_pool.conversion_pool_share, 50);
     }
 
@@ -407,28 +407,28 @@ mod tests {
     fn test_calculate_st_tokens() {
         let config = TokenomicsConfig::default();
         let st_tokens = config.calculate_st_tokens(10.0); // 10 GEL
-        assert_eq!(st_tokens, 1000); // 10 * 100 = 1000 ST
+        assert_eq!(st_tokens, 200); // 10 * 20 = 200 ST (0.2 ST per GEL)
     }
 
     #[test]
     fn test_calculate_ut_for_streaming() {
         let config = TokenomicsConfig::default();
-        let ut_tokens = config.calculate_ut_for_streaming(10); // 10 minutes
-        assert_eq!(ut_tokens, 100); // 10 * 10 = 100 UT
+        let ut_tokens = config.calculate_ut_for_streaming_session(10); // 10 minutes
+        assert_eq!(ut_tokens, 100); // 1 SPOT per session (max 45 minutes)
     }
 
     #[test]
     fn test_calculate_ut_for_streaming_minimum() {
         let config = TokenomicsConfig::default();
-        let ut_tokens = config.calculate_ut_for_streaming(3); // 3 minutes (below minimum)
-        assert_eq!(ut_tokens, 0); // Should be 0 due to minimum time requirement
+        let ut_tokens = config.calculate_ut_for_streaming_session(3); // 3 minutes (valid session)
+        assert_eq!(ut_tokens, 100); // 1 SPOT per session (any duration under 45 minutes)
     }
 
     #[test]
     fn test_calculate_ut_for_actions() {
         let config = TokenomicsConfig::default();
         let ut_tokens = config.calculate_ut_for_action("comment", 5);
-        assert_eq!(ut_tokens, 25); // 5 * 5 = 25 UT
+        assert_eq!(ut_tokens, 500); // 5 * 100 = 500 UT (new rate)
     }
 
     #[test]

@@ -922,10 +922,11 @@ mod tests {
             "twitch".to_string(),
             Some(10), // 10 minutes
             None,
+            None, // likes parameter
         );
         
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), 100); // 10 minutes * 10 UT per minute
+        assert_eq!(result.unwrap(), 100); // 1 SPOT per streaming session
         assert!(manager.ut_holders.contains_key("USER_001"));
     }
 
@@ -973,6 +974,7 @@ mod tests {
             "twitch".to_string(),
             Some(100), // 100 minutes
             None,
+            None, // likes parameter
         );
         
         // Trigger conversion round

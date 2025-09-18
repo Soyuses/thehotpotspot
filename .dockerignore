@@ -1,0 +1,14 @@
+target/
+.git/
+.gitignore
+README.md
+*.md
+.vscode/
+.idea/
+*.log
+.env
+.env.local
+.env.production
+node_modules/
+*.tmp
+*.temp

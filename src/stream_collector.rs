@@ -619,6 +619,8 @@ impl StreamCollector {
 mod tests {
     use super::*;
     use std::sync::Arc;
+    use crate::tokenomics_config::TokenomicsConfig;
+    use crate::new_database::NewDatabaseConfig;
 
     #[test]
     fn test_stream_collector_config_default() {

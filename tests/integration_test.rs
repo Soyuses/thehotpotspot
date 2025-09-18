@@ -177,13 +177,13 @@ async fn test_tokenomics_consistency() {
     // Test ST emission rate
     let gel_amount = 25.0;
     let expected_st = tokenomics_config.calculate_st_tokens(gel_amount);
-    assert_eq!(expected_st, 500); // 25.0 * 20 = 500
+    assert_eq!(expected_st, 500); // 25.0 * 20 = 500 ST
 
     // Test UT earning rates
-    assert_eq!(tokenomics_config.utility_token.ut_per_minute, 10);
-    assert_eq!(tokenomics_config.utility_token.ut_per_comment, 5);
-    assert_eq!(tokenomics_config.utility_token.ut_per_share, 20);
-    assert_eq!(tokenomics_config.utility_token.ut_per_like, 2);
+    assert_eq!(tokenomics_config.utility_token.ut_per_streaming_session, 100);
+    assert_eq!(tokenomics_config.utility_token.ut_per_popular_comment, 100);
+    assert_eq!(tokenomics_config.utility_token.ut_per_repost, 100);
+    assert_eq!(tokenomics_config.utility_token.ut_per_fifth_visit, 100);
 
     // Test conversion pool
     let reserved_st = 1000;

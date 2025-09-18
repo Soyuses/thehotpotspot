@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🎥 The Hot Pot Spot - Демонстрация видеопотоков");
-    println!("=" .repeat(50));
+    println!("{}", "=".repeat(50));
 
     // Создаем менеджер видеопотоков
     let manager = Arc::new(RwLock::new(VideoStreamingManager::new()));
@@ -146,7 +146,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     println!("\n🎉 Демонстрация видеопотоков завершена!");
-    println!("=" .repeat(50));
+    println!("{}", "=".repeat(50));
 
     Ok(())
 }

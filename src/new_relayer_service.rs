@@ -9,7 +9,8 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use tokio::sync::RwLock;
 use crate::new_tokenomics::{NewTokenomicsManager, SaleRecord, StMinting, KycStatus};
-use crate::new_database::{NewDatabaseManager, User};
+use crate::new_database::{NewDatabaseManager, User, NewDatabaseConfig};
+use crate::tokenomics_config::TokenomicsConfig;
 
 /// Relayer configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
