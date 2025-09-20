@@ -441,7 +441,7 @@ impl KYCAmlManager {
             .collect();
 
         // Освобождаем borrow пользователя
-        drop(user);
+        let _ = user;
 
         // Получаем required_docs после освобождения borrow
         let required_docs = self.get_required_documents(&kyc_level);

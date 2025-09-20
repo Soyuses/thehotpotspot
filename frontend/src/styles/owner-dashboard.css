@@ -1,67 +1,140 @@
-/* Owner Dashboard Styles */
+/* Pixel Royal Owner Dashboard */
 
 .owner-dashboard {
   min-height: 100vh;
-  background: #f8f9fa;
+  background: var(--pixel-dark);
+  font-family: 'Press Start 2P', monospace;
+  image-rendering: pixelated;
 }
 
 .dashboard-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(45deg, var(--royal-purple) 0%, var(--royal-blue) 50%, var(--royal-gold) 100%);
+  color: var(--pixel-light);
   padding: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-bottom: var(--pixel-border-thick);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-header::before {
+  content: '👑';
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 48px;
+  animation: crown 3s ease-in-out infinite;
+}
+
+.dashboard-header::after {
+  content: '⚡';
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 48px;
+  animation: lightning 2s ease-in-out infinite;
+}
+
+@keyframes crown {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(5deg) scale(1.1); }
+}
+
+@keyframes lightning {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.2); }
 }
 
 .dashboard-header h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   margin: 0;
+  text-shadow: 3px 3px 0px var(--pixel-darker);
+  position: relative;
+  z-index: 1;
 }
 
 .header-actions {
   display: flex;
   gap: 1rem;
+  position: relative;
+  z-index: 1;
 }
 
-/* Tabs */
+/* Pixel Royal Tabs */
 .tabs {
-  background: white;
-  border-bottom: 1px solid var(--border-color);
+  background: var(--pixel-light);
+  border-bottom: var(--pixel-border-thick);
   display: flex;
   overflow-x: auto;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  position: relative;
+}
+
+.tabs::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--royal-gold), var(--royal-purple), var(--royal-blue));
 }
 
 .tab {
   padding: 1rem 1.5rem;
   border: none;
-  background: none;
+  background: var(--pixel-light);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 10px;
   color: var(--text-light);
-  border-bottom: 3px solid transparent;
-  transition: var(--transition);
+  border-bottom: 4px solid transparent;
   white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  font-family: 'Press Start 2P', monospace;
+}
+
+.tab::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, transparent 0%, rgba(255, 215, 0, 0.1) 100%);
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
 .tab:hover {
-  color: var(--primary-color);
-  background: #f8f9fa;
+  color: var(--royal-gold);
+  background: var(--royal-silver);
+}
+
+.tab:hover::before {
+  opacity: 1;
 }
 
 .tab.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
-  background: #f8f9fa;
+  color: var(--royal-gold);
+  border-bottom-color: var(--royal-gold);
+  background: var(--royal-silver);
+  text-shadow: 2px 2px 0px var(--pixel-darker);
 }
 
-/* Tab content */
+.tab.active::before {
+  opacity: 1;
+}
+
+/* Pixel Royal Tab Content */
 .tab-content {
   padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  background: var(--pixel-light);
+  min-height: calc(100vh - 200px);
 }
 
 .tab-panel {
@@ -72,19 +145,40 @@
   display: block;
 }
 
-/* Cards */
+/* Pixel Royal Cards */
 .card {
-  background: white;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
+  background: var(--pixel-light);
+  border: var(--pixel-border);
+  box-shadow: var(--pixel-shadow);
   padding: 2rem;
   margin-bottom: 2rem;
+  position: relative;
+  image-rendering: pixelated;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: -4px;
+  right: -4px;
+  bottom: -4px;
+  background: linear-gradient(45deg, var(--royal-gold), var(--royal-purple), var(--royal-blue));
+  z-index: -1;
+}
+
+.card:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px var(--pixel-darker);
 }
 
 .card h3 {
   margin-bottom: 1.5rem;
-  color: var(--dark-color);
-  font-size: 1.5rem;
+  color: var(--pixel-darker);
+  font-size: 1.2rem;
+  text-shadow: 2px 2px 0px var(--royal-silver);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* Monitoring grid */
